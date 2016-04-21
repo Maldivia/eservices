@@ -1,7 +1,7 @@
 /****************************************************************************
 * Exiled.net IRC Services                                                   *
-* Copyright (C) 2002  Michael Rasmussen <the_real@nerdheaven.dk>            *
-*                     Morten Post <cure@nerdheaven.dk>                      *
+* Copyright (C) 2002-2003  Michael Rasmussen <the_real@nerdheaven.dk>       *
+*                          Morten Post <cure@nerdheaven.dk>                 *
 *                                                                           *
 * This program is free software; you can redistribute it and/or modify      *
 * it under the terms of the GNU General Public License as published by      *
@@ -17,10 +17,11 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: dbase.h,v 1.6 2003/02/25 23:48:39 mr Exp $ */
+/* $Id: dbase.h,v 1.9 2004/03/19 21:50:36 mr Exp $ */
 
 #ifndef INC_DBASE_H
 #define INC_DBASE_H
+
 /*
 
 | BIT |   NickServ   |   ChanServ   | BIT |   OperServ   |   ChanServ   |
@@ -34,9 +35,9 @@
 |  6  |              |              | 22  |              |              |
 |  7  |              |              | 23  |              |              |
 +-----+--------------+--------------+-----+--------------+--------------+
-|  8  |              |              | 24  |   NS Oper    |              |
-|  9  |              |              | 25  |   CS Oper    |              |
-| 10  |              |              | 26  |  Developer   |              |
+|  8  |              |   Strictops  | 24  |   NS Oper    |              |
+|  9  |              |  strictmodes | 25  |   CS Oper    |              |
+| 10  |              |  stricttopic | 26  |  Developer   |              |
 | 11  |              |              | 27  |     DCC      |              |
 | 12  |              |              | 28  |   NS Admin   |              |
 | 13  |              |              | 29  |   CS Admin   |              |
@@ -56,6 +57,9 @@
 #define BITS_CHANSERV_DISABLED           0x00000001
 #define BITS_CHANSERV_NOEXPIRE           0x00000008
 #define BITS_CHANSERV_EXPIRED            0x00008000
+#define BITS_CHANSERV_STRICTOPS          0x00000100
+#define BITS_CHANSERV_STRICTMODES        0x00000200
+#define BITS_CHANSERV_STRICTTOPIC        0x00000400
 
 #define BITS_OPERSERV_OPER               0x00000001
 

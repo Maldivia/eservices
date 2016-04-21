@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: operserv.c,v 1.11 2003/02/21 23:17:45 mr Exp $ */
+/* $Id: operserv.c,v 1.12 2003/10/19 22:23:00 mr Exp $ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -83,24 +83,33 @@ int operserv_valid_gline(char *userhost)
 
   while (*userhost)
   {
-    if ((*userhost == '*') || (*userhost == '?')) wildcards++;
+    if ((*userhost == '*') || (*userhost == '?'))
+      wildcards++;
     else if (*userhost == '@')
     {
       if (at_sign) return 0;
       at_sign++;
     }
-    else if (((*userhost >= '0') && (*userhost <= '9')) ||
-             ((*userhost >= 'a') && (*userhost <= 'z')) ||
-             ((*userhost >= 'A') && (*userhost <= 'Z')) ||
-             (*userhost == '.') || (*userhost == '-') || (*userhost == '_'))
-             {
-               normal++;
-               if (at_sign) after_at++;
-             }
-    else return 0;
+    else if (((*userhost >= 'A')    && (*userhost <= '~'))    || /* A-Z, a-z [\]^_`{|}~ */
+             ((*userhost >= '0')    && (*userhost <= '9'))    || /* 0-9 */
+             ((*userhost >= '\xe0') && (*userhost <= '\xf6')) || /* àáâãäåæçèéêëìíîïðñòóôõö */
+             ((*userhost >= '\xf8') && (*userhost <= '\xfe')) || /* øùúûüýþ = Int. lowercase */
+             ((*userhost >= '\xc0') && (*userhost <= '\xd6')) || /* ÀÁÂÃÄÅÆÇÈÉÊËÌÍÎÏÐÑÒÓÔÕÖ */
+             ((*userhost >= '\xd8') && (*userhost <= '\xde')) || /* ØÙÚÛÜÝÞ = Int. uppercase */
+             (*userhost == '.') || (*userhost == '-') || (*userhost =='\''))
+    {
+      normal++;
+      if (at_sign && (*userhost== '~'))
+        return 0;
+      else if (at_sign)
+        after_at++;
+    }
+    else
+      return 0;
+
     userhost++;
   }
-  return ((after_at > 3) && (normal > wildcards) && (at_sign) && (normal >= 5));
+  return ((at_sign) && (normal >= 3));
 }
 
 char *operserv_flags_to_str(unsigned long flags, char *buf)

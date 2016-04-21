@@ -1,7 +1,7 @@
 /****************************************************************************
 * Exiled.net IRC Services                                                   *
-* Copyright (C) 2002  Michael Rasmussen <the_real@nerdheaven.dk>            *
-*                     Morten Post <cure@nerdheaven.dk>                      *
+* Copyright (C) 2002-2003  Michael Rasmussen <the_real@nerdheaven.dk>       *
+*                          Morten Post <cure@nerdheaven.dk>                 *
 *                                                                           *
 * This program is free software; you can redistribute it and/or modify      *
 * it under the terms of the GNU General Public License as published by      *
@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: errors.c,v 1.2 2003/01/12 15:30:26 cure Exp $ */
+/* $Id: errors.c,v 1.4 2004/03/23 11:54:18 mr Exp $ */
 
 #include <stdlib.h>
 
@@ -33,7 +33,8 @@ struct err_struct err_messages[] =
   {ERROR_DBASE_MYSQL_ERROR,           "mySQL error"},
   {ERROR_SERVER_COULD_NOT_CONNECT,    "Error connecting to UPLINK"},
   {ERROR_OPERSERV_DIE,                "OperServ DIE command"},
-  {-1,                           NULL}
+  {ERROR_PING_TIMEOUT,                "No ping response from uplink within specified time"},
+  {-1,                                NULL}
 };
 
 

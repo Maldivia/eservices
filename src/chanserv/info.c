@@ -17,8 +17,12 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: info.c,v 1.3 2003/03/01 16:47:04 cure Exp $ */
+/* $Id: info.c,v 1.6 2004/04/27 13:39:02 cure Exp $ */
+#include "setup.h"
 
+#include <string.h>
+
+#include "channels.h"
 #include "chanserv.h"
 #include "operserv.h"
 #include "misc_func.h"
@@ -53,32 +57,86 @@
  **************************************************************************************************/
 FUNC_COMMAND(chanserv_info)
 {
+  int i, j;
+  dbase_channels *ch;
   chanserv_dbase_channel *data;
   char *chan = getnext(params);
 
   if (!chan) return com_message(sock, conf->cs->numeric, from->numeric, format, command_info->syntax);
 
-  if (!(data = chanserv_dbase_find_chan(chan))) return com_message(sock, conf->cs->numeric, from->numeric, format, CHANSERV_CHANNEL_NOT_FOUND, chan);
+  data = chanserv_dbase_find_chan(chan);
+  ch = channels_getinfo(-1, chan);
+
+  if (data)
+  {  
+    com_message(sock, conf->cs->numeric, from->numeric, format, "Information about %s:", chan);
+    com_message(sock, conf->cs->numeric, from->numeric, format, "  Status.....: %s", ((data->flags & BITS_CHANSERV_DISABLED)?"Disabled":"Active"));
+    com_message(sock, conf->cs->numeric, from->numeric, format, "  Owner......: %s", data->owner);
+
+    if ((chanserv_dbase_check_access(from->nickserv, data, CHANSERV_LEVEL_SET)) ||
+       (operserv_have_access(from->nickserv->flags, BITS_OPERSERV_CS_OPER)))
+    {
+      if (ch)
+      {
+        char buf[BUFFER_SIZE];
+
+        com_message(sock, conf->cs->numeric, from->numeric, format, "  Expired....: %s", (data->flags & BITS_CHANSERV_EXPIRED)?"YES":"NO");
+        com_message(sock, conf->cs->numeric, from->numeric, format, "  No Expire..: %s", (data->flags & BITS_CHANSERV_NOEXPIRE)?"ON":"OFF");
+        com_message(sock, conf->cs->numeric, from->numeric, format, "  Stricttopic: %s", (data->flags & BITS_CHANSERV_STRICTTOPIC)?"ON":"OFF");
+        com_message(sock, conf->cs->numeric, from->numeric, format, "  Strictops..: %s", (data->flags & BITS_CHANSERV_STRICTOPS)?"ON":"OFF");
+        com_message(sock, conf->cs->numeric, from->numeric, format, "  Laston.....: %s", gtime((time_t*)&data->lastlogin));
+        com_message(sock, conf->cs->numeric, from->numeric, format, "  Comments...: %lu", data->comment_count);
     
-  com_message(sock, conf->cs->numeric, from->numeric, format, "Information about %s:", chan);
-  com_message(sock, conf->cs->numeric, from->numeric, format, "  Status...: %s", ((data->flags & BITS_CHANSERV_DISABLED)?"Disabled":"Active"));
-  com_message(sock, conf->cs->numeric, from->numeric, format, "  Owner....: %s", data->owner);
-  /* TODO This should be changed to CHANSERV_LEVEL_SET when that is coded!!! */
-  if ((chanserv_dbase_check_access(from->nickserv, data, CHANSERV_LEVEL_CLEARMODES)) ||
-     (operserv_have_access(from->nickserv->flags, BITS_OPERSERV_CS_OPER)))
-  {
-    com_message(sock, conf->cs->numeric, from->numeric, format, "  Expired..: %s", (data->flags & BITS_CHANSERV_EXPIRED)?"YES":"NO");
-    com_message(sock, conf->cs->numeric, from->numeric, format, "  No Expire: %s", (data->flags & BITS_CHANSERV_NOEXPIRE)?"ON":"OFF");
-    com_message(sock, conf->cs->numeric, from->numeric, format, "  Laston...: %s", gtime((time_t*)&data->lastlogin));
-    com_message(sock, conf->cs->numeric, from->numeric, format, "  Comments.: %lu", data->comment_count);
+        if (ch->topic) 
+          com_message(sock, conf->cs->numeric, from->numeric, format, "  Topic......: %s", ch->topic);
+    
+        strcpy(buf, gtime((time_t *)&ch->createtime));
+        com_message(sock, conf->cs->numeric, from->numeric, format, "  Created....: %s", buf);
+        j = 0;
+        buf[0] = '\0';
+        for (i = 0; i < 32; i++)
+        {
+          if (isbiton(ch->modes, i))
+          {
+            buf[j++] = 'a'+i;
+            buf[j] = '\0';
+          }
+        }
+        if (buf[0])
+          com_message(sock, conf->cs->numeric, from->numeric, format, "  Mode.......: %s", buf);
+        if (ch->limit) 
+          com_message(sock, conf->cs->numeric, from->numeric, format, "  Limit......: %d", ch->limit);
+        if (ch->key) 
+          com_message(sock, conf->cs->numeric, from->numeric, format, "  Key........: %s", ch->key);
+      }
+    }
+    
+    if (operserv_have_access(from->nickserv->flags, BITS_OPERSERV_CS_OPER))
+    {
+      int i;
+      com_message(sock, conf->cs->numeric, from->numeric, format, CHANSERV_ACCESS_LIST_HEAD, chan);
+      for (i = 0; i < data->access_count; i++)
+        com_message(sock, conf->cs->numeric, from->numeric, format, CHANSERV_ACCESS_LIST_ENTRY, data->access[i]->autoop?'@':' ', data->access[i]->level, data->access[i]->nick->nick);
+    }
   }
- 
-  if (operserv_have_access(from->nickserv->flags, BITS_OPERSERV_CS_OPER))
+  else
+    com_message(sock, conf->cs->numeric, from->numeric, format, CHANSERV_CHANNEL_NOT_FOUND, chan);
+
+  if (ch && (operserv_have_access(from->nickserv->flags, BITS_OPERSERV_CS_OPER)))
   {
-    int i;
-    com_message(sock, conf->cs->numeric, from->numeric, format, CHANSERV_ACCESS_LIST_HEAD, chan);
-    for (i = 0; i < data->access_count; i++)
-      com_message(sock, conf->cs->numeric, from->numeric, format, CHANSERV_ACCESS_LIST_ENTRY, data->access[i]->autoop?'@':' ', data->access[i]->level, data->access[i]->nick->nick);
+    if (ch->bancount)
+    {
+      com_message(sock, conf->cs->numeric, from->numeric, format, "  Bans.....: %s", ch->bans[0]);
+      for (i = 1; i < ch->bancount; i++)
+        com_message(sock, conf->cs->numeric, from->numeric, format, "             %s", ch->bans[i]);
+    }
+    if (ch->usercount)
+    {
+      char *modestr[4] = {"  ", " +", " @", "+@"};
+      com_message(sock, conf->cs->numeric, from->numeric, format, "  Users....: %s%s", modestr[ch->users[0]->mode], ch->users[0]->nick->nick);
+      for (i = 1; i < ch->usercount; i++)
+        com_message(sock, conf->cs->numeric, from->numeric, format, "             %s%s", modestr[ch->users[i]->mode], ch->users[i]->nick->nick);
+    }
   }
 
   log_command(LOG_CHANSERV, from, "INFO", queue_escape_string(chan));

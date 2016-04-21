@@ -1,7 +1,7 @@
 /****************************************************************************
 * Exiled.net IRC Services                                                   *
-* Copyright (C) 2002  Michael Rasmussen <the_real@nerdheaven.dk>            *
-*                     Morten Post <cure@nerdheaven.dk>                      *
+* Copyright (C) 2002-2003  Michael Rasmussen <the_real@nerdheaven.dk>       *
+*                          Morten Post <cure@nerdheaven.dk>                 *
 *                                                                           *
 * This program is free software; you can redistribute it and/or modify      *
 * it under the terms of the GNU General Public License as published by      *
@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: channels.c,v 1.5 2003/02/21 23:12:19 mr Exp $ */ 
+/* $Id: channels.c,v 1.8 2003/10/20 11:48:11 cure Exp $ */ 
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -32,9 +32,12 @@
 #include "chanserv.h"
 
 extern sock_info *irc;
-static dbase_channels **channels       = NULL; 
-static long             channels_count = 0;
+static list_data channels;
 
+void channels_init(void)
+{
+  channels = irc_list_create();
+}
 
 /********************************************************************
   CHANNELS_SEARCH
@@ -51,7 +54,7 @@ static long             channels_count = 0;
 ********************************************************************/
 long channels_search(const char *name)
 {
-  return channels_internal_search(0, channels_count-1, name);
+  return channels_internal_search(0, channels.size - 1, name);
 }
 
 /********************************************************************
@@ -75,7 +78,7 @@ long channels_internal_search(long low, long high, const char *name)
   int res;
   long mid = high - ((high - low) / 2);
   if (low > high) return -1-low;
-  res = strcasecmp(name, channels[mid]->name);
+  res = strcasecmp(name, channels.list.channels[mid]->name);
   if (res < 0) return channels_internal_search(low, mid-1, name);
   else if (res > 0) return channels_internal_search(mid+1, high, name);
   else return mid;
@@ -109,31 +112,29 @@ long channels_add(const char *name, long createtime)
   {
     nr += 1;
     nr *= -1;
-    channels = (dbase_channels**)realloc(channels, (channels_count+1) * sizeof(dbase_channels*));
-    if (nr < (channels_count++)) memmove(&channels[nr+1], &channels[nr], (channels_count - nr - 1) * sizeof(dbase_channels*));
-    channels[nr] = (dbase_channels*)malloc(sizeof(dbase_channels));
+    irc_list_add(&channels, nr, xmalloc(sizeof(dbase_channels)));
   }
   else
   {
     return nr;
   }
 
-  channels[nr]->name = (char *)malloc(sizeof(char)*(strlen(name)+1));
-  strcpy(channels[nr]->name, name);
+  channels.list.channels[nr]->name = (char *)xmalloc(sizeof(char)*(strlen(name)+1));
+  strcpy(channels.list.channels[nr]->name, name);
 
-  channels[nr]->topic = NULL;
-  channels[nr]->modes = 0;
-  channels[nr]->bancount = 0;
-  channels[nr]->bans = NULL;
-  channels[nr]->key = NULL;
+  channels.list.channels[nr]->topic = NULL;
+  channels.list.channels[nr]->modes = 0;
+  channels.list.channels[nr]->bancount = 0;
+  channels.list.channels[nr]->bans = NULL;
+  channels.list.channels[nr]->key = NULL;
 
-  channels[nr]->users = (dbase_channels_nicks **)calloc(0, sizeof(dbase_channels_nicks*));
+  channels.list.channels[nr]->users = (dbase_channels_nicks **)xcalloc(0, sizeof(dbase_channels_nicks*));
   
-  channels[nr]->usercount = 0;
-  channels[nr]->limit = 0;
-  channels[nr]->createtime = createtime;
+  channels.list.channels[nr]->usercount = 0;
+  channels.list.channels[nr]->limit = 0;
+  channels.list.channels[nr]->createtime = createtime;
 
-  channels[nr]->chanserv = NULL;
+  channels.list.channels[nr]->chanserv = NULL;
 
   return nr;
 }
@@ -155,21 +156,21 @@ long channels_add(const char *name, long createtime)
 long channels_remove(long index, const char *name)
 {
   int i;
-  if ((index < 0) || (index >= channels_count)) index = channels_search(name);
+  if ((index < 0) || (index >= channels.size)) index = channels_search(name);
   if (index < 0) return index;
-  if (channels[index])
+  if (channels.list.channels[index])
   {
-    xfree(channels[index]->name);
-    xfree(channels[index]->topic);
-    xfree(channels[index]->users);
-    xfree(channels[index]->key);
-      for (i=0;i<channels[index]->bancount;i++)
-        xfree(channels[index]->bans[i]);
-      xfree(channels[index]->bans);
-    xfree(channels[index]);
+    xfree(channels.list.channels[index]->name);
+    xfree(channels.list.channels[index]->topic);
+    xfree(channels.list.channels[index]->users);
+    xfree(channels.list.channels[index]->key);
+      for (i=0;i<channels.list.channels[index]->bancount;i++)
+        xfree(channels.list.channels[index]->bans[i]);
+      xfree(channels.list.channels[index]->bans);
+    xfree(channels.list.channels[index]);
   }
-  memmove(&channels[index], &channels[index+1], (channels_count - index - 1) * sizeof(dbase_channels*));
-  channels = (dbase_channels**)realloc(channels, (--channels_count) * sizeof(dbase_channels*));
+  
+  irc_list_delete(&channels, index);
   return index;
 }
 
@@ -191,7 +192,7 @@ long channels_setmode(long index, const char *name, char *modes)
 {
   unsigned int i, check = 1;
   if (!modes) return 0;
-  if ((index < 0) || (index >= channels_count)) index = channels_search(name);
+  if ((index < 0) || (index >= channels.size)) index = channels_search(name);
   if (index < 0) return index;
 
   for (i = 0; i < strlen(modes); i++)
@@ -200,8 +201,8 @@ long channels_setmode(long index, const char *name, char *modes)
     else if (modes[i] == '-') check = 0;
     else if ((modes[i] >= 'a') && (modes[i] <= 'z'))
     {
-      if (check) bitadd(channels[index]->modes, modes[i]-'a');
-      else bitdel(channels[index]->modes, modes[i]-'a');
+      if (check) bitadd(channels.list.channels[index]->modes, modes[i]-'a');
+      else bitdel(channels.list.channels[index]->modes, modes[i]-'a');
     }   
   }
 
@@ -225,11 +226,11 @@ long channels_setmode(long index, const char *name, char *modes)
 long channels_settopic(long index, const char *name, char *topic)
 {
   if (!topic) return 0;
-  if ((index < 0) || (index >= channels_count)) index = channels_search(name);
+  if ((index < 0) || (index >= channels.size)) index = channels_search(name);
   if (index < 0) return index;
 
-  channels[index]->topic = (char*)realloc(channels[index]->topic, sizeof(char)*(strlen(topic)+1));
-  strcpy(channels[index]->topic, topic);
+  channels.list.channels[index]->topic = (char*)xrealloc(channels.list.channels[index]->topic, sizeof(char)*(strlen(topic)+1));
+  strcpy(channels.list.channels[index]->topic, topic);
 
   return index;
 }
@@ -251,9 +252,9 @@ long channels_settopic(long index, const char *name, char *topic)
 ********************************************************************/
 long channels_addlimit(long index, const char *name, long limit)
 {
-  if ((index < 0) || (index >= channels_count)) index = channels_search(name);
+  if ((index < 0) || (index >= channels.size)) index = channels_search(name);
   if (index < 0) return index;
-  channels[index]->limit = limit;
+  channels.list.channels[index]->limit = limit;
   channels_setmode(index, NULL, "+l");  
   return index;
 }
@@ -273,9 +274,9 @@ long channels_addlimit(long index, const char *name, long limit)
 ********************************************************************/
 long channels_remlimit(long index, const char *name)
 {
-  if ((index < 0) || (index >= channels_count)) index = channels_search(name);
+  if ((index < 0) || (index >= channels.size)) index = channels_search(name);
   if (index < 0) return index;
-  channels[index]->limit = 0;
+  channels.list.channels[index]->limit = 0;
   channels_setmode(index, NULL, "-l");
   return index;
 }
@@ -298,11 +299,11 @@ long channels_remlimit(long index, const char *name)
 long channels_addkey(long index, const char *name, char *key)
 {
   if (!key) return 0;
-  if ((index < 0) || (index >= channels_count)) index = channels_search(name);
+  if ((index < 0) || (index >= channels.size)) index = channels_search(name);
   if (index < 0) return index;
 
-  channels[index]->key = (char *)realloc(channels[index]->key, sizeof(char)*(strlen(key)+1));
-  strcpy(channels[index]->key, key);
+  channels.list.channels[index]->key = (char *)xrealloc(channels.list.channels[index]->key, sizeof(char)*(strlen(key)+1));
+  strcpy(channels.list.channels[index]->key, key);
     channels_setmode(index, NULL, "+k");
 
   return index;
@@ -323,14 +324,14 @@ long channels_addkey(long index, const char *name, char *key)
 ********************************************************************/
 long channels_remkey(long index, const char *name, const char *key)
 {
-  if ((index < 0) || (index >= channels_count)) index = channels_search(name);
+  if ((index < 0) || (index >= channels.size)) index = channels_search(name);
   if (index < 0) return index;
 
-  if (!channels[index]->key) return -1;
-  if (strcmp(channels[index]->key, key)) return -1;
-  xfree(channels[index]->key);
+  if (!channels.list.channels[index]->key) return -1;
+  if (strcmp(channels.list.channels[index]->key, key)) return -1;
+  xfree(channels.list.channels[index]->key);
   
-  channels[index]->key = NULL;
+  channels.list.channels[index]->key = NULL;
   channels_setmode(index, NULL, "-k");
   return index;
 }
@@ -352,7 +353,7 @@ long channels_remkey(long index, const char *name, const char *key)
 long channels_addban(long index, const char *name, char *bans)
 {
   char *tmp;
-  if ((index < 0) || (index >= channels_count)) index = channels_search(name);
+  if ((index < 0) || (index >= channels.size)) index = channels_search(name);
   if (index < 0) return index;
 
   if (bans == NULL) return -1*index;
@@ -372,9 +373,9 @@ long channels_addban(long index, const char *name, char *bans)
     if (!channels_check_ban_covered(index, name, bans))
     {
       channels_remove_covered_ban(index, name, bans);
-      channels[index]->bans = (char **)realloc(channels[index]->bans, sizeof(char *)*(++channels[index]->bancount));
-      channels[index]->bans[channels[index]->bancount - 1] = (char*)malloc(sizeof(char)*(strlen(bans)+1));
-      strcpy(channels[index]->bans[channels[index]->bancount - 1], bans);
+      channels.list.channels[index]->bans = (char **)xrealloc(channels.list.channels[index]->bans, sizeof(char *)*(++channels.list.channels[index]->bancount));
+      channels.list.channels[index]->bans[channels.list.channels[index]->bancount - 1] = (char*)xmalloc(sizeof(char)*(strlen(bans)+1));
+      strcpy(channels.list.channels[index]->bans[channels.list.channels[index]->bancount - 1], bans);
     }
     bans = tmp;
   } while (bans);
@@ -399,7 +400,7 @@ long channels_remban(long index, const char *name, char *bans)
 {
   char *tmp;
   int i;
-  if ((index < 0) || (index >= channels_count)) index = channels_search(name);
+  if ((index < 0) || (index >= channels.size)) index = channels_search(name);
   if (index < 0) return index;
 
   if (bans == NULL) return -1*index;
@@ -411,15 +412,15 @@ long channels_remban(long index, const char *name, char *bans)
     {
       while (tmp[0] == ' ') *tmp++ = '\0';
     }
-    if (!chanserv_dbase_check_enforced_ban(channels[index]->name, bans))
+    if (!chanserv_dbase_check_enforced_ban(channels.list.channels[index]->name, bans))
     {
-      for (i=0; i<channels[index]->bancount; i++)
+      for (i=0; i<channels.list.channels[index]->bancount; i++)
       {
-        if (strcasecmp(bans, channels[index]->bans[i]) == 0)
+        if (strcasecmp(bans, channels.list.channels[index]->bans[i]) == 0)
         {
-          xfree(channels[index]->bans[i]);
-          channels[index]->bans[i] = channels[index]->bans[--channels[index]->bancount];
-          channels[index]->bans = (char **)realloc(channels[index]->bans, sizeof(char*)*(channels[index]->bancount));
+          xfree(channels.list.channels[index]->bans[i]);
+          channels.list.channels[index]->bans[i] = channels.list.channels[index]->bans[--channels.list.channels[index]->bancount];
+          channels.list.channels[index]->bans = (char **)xrealloc(channels.list.channels[index]->bans, sizeof(char*)*(channels.list.channels[index]->bancount));
           break;
         }
       }
@@ -432,14 +433,14 @@ long channels_remban(long index, const char *name, char *bans)
 int channels_check_ban_covered(long index, const char *name, const char *ban)
 {
   int i;
-  if ((index < 0) || (index >= channels_count)) index = channels_search(name);
+  if ((index < 0) || (index >= channels.size)) index = channels_search(name);
   if (index < 0) return 0;
 
   if (ban == NULL) return 0;
   if (strlen(ban) < 1) return 0;
     
-  for (i=0; i < channels[index]->bancount; i++)
-    if (wildcard_compare(ban, channels[index]->bans[i])) return 1;
+  for (i=0; i < channels.list.channels[index]->bancount; i++)
+    if (wildcard_compare(ban, channels.list.channels[index]->bans[i])) return 1;
       
   return 0;
 }
@@ -447,19 +448,19 @@ int channels_check_ban_covered(long index, const char *name, const char *ban)
 long channels_remove_covered_ban(long index, const char *name, const char *ban)
 {
   int i;
-  if ((index < 0) || (index >= channels_count)) index = channels_search(name);
+  if ((index < 0) || (index >= channels.size)) index = channels_search(name);
   if (index < 0) return index;
 
   if (ban == NULL) return -1*index;
   if (strlen(ban) < 1) return -1*index;
     
-  for (i=0; i < channels[index]->bancount; i++)
+  for (i=0; i < channels.list.channels[index]->bancount; i++)
   {
-    if (wildcard_compare(channels[index]->bans[i], ban))
+    if (wildcard_compare(channels.list.channels[index]->bans[i], ban))
     {
-      xfree(channels[index]->bans[i]);
-      channels[index]->bans[i] = channels[index]->bans[--channels[index]->bancount];
-      channels[index]->bans = (char **)realloc(channels[index]->bans, sizeof(char*)*(channels[index]->bancount));
+      xfree(channels.list.channels[index]->bans[i]);
+      channels.list.channels[index]->bans[i] = channels.list.channels[index]->bans[--channels.list.channels[index]->bancount];
+      channels.list.channels[index]->bans = (char **)xrealloc(channels.list.channels[index]->bans, sizeof(char*)*(channels.list.channels[index]->bancount));
       i--;
     }
   }
@@ -483,39 +484,39 @@ long channels_remove_covered_ban(long index, const char *name, const char *ban)
 long channels_userjoin(long index, const char *name, const char *mode, const char *numeric)
 {
   long nr;
-  if ((index < 0) || (index >= channels_count)) index = channels_search(name);
+  if ((index < 0) || (index >= channels.size)) index = channels_search(name);
   if (index < 0)
   {
     if ((index = channels_add(name, time(0))) < 0) return index;
   }
 
-  if ((nr = channels_user_search(channels[index]->users, 0, channels[index]->usercount-1, numeric)) < 0)
+  if ((nr = channels_user_search(channels.list.channels[index]->users, 0, channels.list.channels[index]->usercount-1, numeric)) < 0)
   {
     nr += 1;
     nr *= -1;
-    channels[index]->users = (dbase_channels_nicks **) realloc(channels[index]->users, (channels[index]->usercount+1) * sizeof(dbase_channels_nicks*));
-    if (nr < (channels[index]->usercount++))
-      memmove(&channels[index]->users[nr+1], &channels[index]->users[nr], (channels[index]->usercount - nr - 1) * sizeof(dbase_channels_nicks*));
+    channels.list.channels[index]->users = (dbase_channels_nicks **) xrealloc(channels.list.channels[index]->users, (channels.list.channels[index]->usercount+1) * sizeof(dbase_channels_nicks*));
+    if (nr < (channels.list.channels[index]->usercount++))
+      memmove(&channels.list.channels[index]->users[nr+1], &channels.list.channels[index]->users[nr], (channels.list.channels[index]->usercount - nr - 1) * sizeof(dbase_channels_nicks*));
   }
   else
     return -1*nr;
     
-  channels[index]->users[nr] = malloc(sizeof(dbase_channels_nicks));
-  channels[index]->users[nr]->channel = channels[index];
-  channels[index]->users[nr]->mode = 0;
-  nicks_join_channel(numeric, channels[index]->users[nr]);
+  channels.list.channels[index]->users[nr] = xmalloc(sizeof(dbase_channels_nicks));
+  channels.list.channels[index]->users[nr]->channel = channels.list.channels[index];
+  channels.list.channels[index]->users[nr]->mode = 0;
+  nicks_join_channel(numeric, channels.list.channels[index]->users[nr]);
   channels_usermode(index, name, mode, numeric);
-  if (channels[index]->users[nr]->nick->nickserv)
+  if (channels.list.channels[index]->users[nr]->nick->nickserv)
   {
-    chanserv_dbase_access *ac = chanserv_dbase_has_access(channels[index]->users[nr]->nick->nickserv->nick, chanserv_dbase_find_chan(channels[index]->name));
+    chanserv_dbase_access *ac = chanserv_dbase_has_access(channels.list.channels[index]->users[nr]->nick->nickserv->nick, chanserv_dbase_find_chan(channels.list.channels[index]->name));
     if (ac)
     {
       /* Check if the user has autoop - and the channel is not disabled */
-      if ((ac->autoop) && (channels[index]->chanserv))
+      if ((ac->autoop) && (channels.list.channels[index]->chanserv))
       {
         channels_usermode(index, name, "+o", numeric);
         com_send(irc, "%s M %s +o %s\n", conf->cs->numeric, name, numeric);
-        chanserv_dbase_update_lastlogin(channels[index]->chanserv);
+        chanserv_dbase_update_lastlogin(channels.list.channels[index]->chanserv);
       }
     }
   }
@@ -542,18 +543,18 @@ long channels_userjoin(long index, const char *name, const char *mode, const cha
 long channels_userpart(long index, const char *name,  const char *numeric)
 {
   long nr;
-  if ((index < 0) || (index >= channels_count)) index = channels_search(name);
+  if ((index < 0) || (index >= channels.size)) index = channels_search(name);
   if (index < 0) return index;
-  if ((nr = channels_user_search(channels[index]->users, 0, channels[index]->usercount-1, numeric)) < 0)
+  if ((nr = channels_user_search(channels.list.channels[index]->users, 0, channels.list.channels[index]->usercount-1, numeric)) < 0)
     return nr;
     
-  nicks_part_channel(numeric, channels[index]->users[nr]);
-  xfree(channels[index]->users[nr]);
+  nicks_part_channel(numeric, channels.list.channels[index]->users[nr]);
+  xfree(channels.list.channels[index]->users[nr]);
 
-  memmove(&channels[index]->users[nr], &channels[index]->users[nr+1], (channels[index]->usercount - nr - 1) * sizeof(dbase_channels_nicks*));
-  channels[index]->users = (dbase_channels_nicks **) realloc(channels[index]->users, --channels[index]->usercount * sizeof(dbase_channels_nicks*));
+  memmove(&channels.list.channels[index]->users[nr], &channels.list.channels[index]->users[nr+1], (channels.list.channels[index]->usercount - nr - 1) * sizeof(dbase_channels_nicks*));
+  channels.list.channels[index]->users = (dbase_channels_nicks **) xrealloc(channels.list.channels[index]->users, --channels.list.channels[index]->usercount * sizeof(dbase_channels_nicks*));
 
-  if (channels[index]->usercount <= 0)
+  if (channels.list.channels[index]->usercount <= 0)
     return channels_remove(index, name);
 
   return nr;
@@ -580,9 +581,9 @@ long channels_usermode(long index, const char *name, const char *mode, const cha
   int sign = 1;
   const char *m;
   if (!mode)  return 1;
-  if ((index < 0) || (index >= channels_count)) index = channels_search(name);
+  if ((index < 0) || (index >= channels.size)) index = channels_search(name);
   if (index < 0) return index;
-  nr = channels_user_search(channels[index]->users, 0, channels[index]->usercount-1, numeric);
+  nr = channels_user_search(channels.list.channels[index]->users, 0, channels.list.channels[index]->usercount-1, numeric);
   if (nr < 0) return nr;
   m = mode;
   while (m[0] != '\0')
@@ -591,8 +592,8 @@ long channels_usermode(long index, const char *name, const char *mode, const cha
     {
       case '+' : sign =  1; break;
       case '-' : sign = -1; break;
-      case 'o' : channels[index]->users[nr]->mode += sign*2; break;
-      case 'v' : channels[index]->users[nr]->mode += sign*1; break;
+      case 'o' : channels.list.channels[index]->users[nr]->mode += sign*2; break;
+      case 'v' : channels.list.channels[index]->users[nr]->mode += sign*1; break;
     }
     m++;
   }
@@ -639,9 +640,9 @@ long channels_user_search(dbase_channels_nicks **arr, long low, long high,  cons
 ********************************************************************/
 dbase_channels *channels_getinfo(long index, const char *name)
 {
-  if ((index < 0) || (index >= channels_count)) index = channels_search(name);
+  if ((index < 0) || (index >= channels.size)) index = channels_search(name);
   if (index < 0) return NULL;
-  return channels[index];
+  return channels.list.channels[index];
 }
 
 /********************************************************************
@@ -654,14 +655,14 @@ dbase_channels *channels_getinfo(long index, const char *name)
 ********************************************************************/
 long channels_getcount(void)
 {
-  return channels_count;
+  return channels.size;
 }
 
 void channels_cleanup(void)
 {
   debug_out(" | |==> Cleaning Channels database...\n");
-  while (channels_count > 0)
-    channels_remove(channels_count -1, NULL);
+  while (channels.size > 0)
+    channels_remove(channels.size -1, NULL);
 }
 
 

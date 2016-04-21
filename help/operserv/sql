@@ -1,0 +1,10 @@
+Syntax: SQL <sql option> <params>
+      
+SQL is a fully functional interface to the database daemon.
+   
+<sql option> can be one of the following:
+  
+    EXEC - Lets you execute the SQL query <params>.
+      
+SEE ALSO:
+  -

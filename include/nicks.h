@@ -1,7 +1,7 @@
 /****************************************************************************
 * Exiled.net IRC Services                                                   *
-* Copyright (C) 2002  Michael Rasmussen <the_real@nerdheaven.dk>            *
-*                     Morten Post <cure@nerdheaven.dk>                      *
+* Copyright (C) 2002-2003  Michael Rasmussen <the_real@nerdheaven.dk>       *
+*                          Morten Post <cure@nerdheaven.dk>                 *
 *                                                                           *
 * This program is free software; you can redistribute it and/or modify      *
 * it under the terms of the GNU General Public License as published by      *
@@ -17,10 +17,12 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: nicks.h,v 1.1.1.1 2002/08/20 15:20:02 mr Exp $ */
+/* $Id: nicks.h,v 1.3 2003/10/19 22:21:38 mr Exp $ */
 
 #ifndef INC_NICKS_H
 #define INC_NICKS_H
+
+void nicks_init(void);
 
 long nicks_search_nick(const char *nick);
 long nicks_search_numeric(const char *numeric);

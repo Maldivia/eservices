@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: whois.c,v 1.3 2003/02/26 12:29:48 mr Exp $ */
+/* $Id: whois.c,v 1.4 2003/10/19 22:24:17 mr Exp $ */
 
 #include "nickserv.h"
 #include "operserv.h"
@@ -54,12 +54,12 @@ FUNC_COMMAND(nickserv_whois)
 
   /* Get info for the nick, if not found, return an error-message to the user */
   if (!(info = nicks_getinfo(NULL, nick, -1)))
-    return com_message(sock, conf->ns->numeric, from->numeric, format, "User (%s) NOT found.");
+    return com_message(sock, conf->ns->numeric, from->numeric, format, "User (%s) NOT found.", nick);
 
   /* write the user@host for the requested nick */
   com_message(sock, conf->ns->numeric, from->numeric, format, "%s is %s!%s@%s :%s", info->nick, info->nick, info->username, info->host, info->userinfo);
 
-  /* write weather the user is authed or not */
+  /* write whether the user is authed or not */
   if (!info->nickserv)
     com_message(sock, conf->ns->numeric, from->numeric, format, "%s is NOT authenticated.", info->nick);
   else

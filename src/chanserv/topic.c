@@ -17,8 +17,10 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: topic.c,v 1.3 2003/03/01 16:47:04 cure Exp $ */
+/* $Id: topic.c,v 1.4 2004/03/19 21:50:44 mr Exp $ */
 
+#include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "chanserv.h"
@@ -28,10 +30,11 @@
 #include "queue.h"
 #include "log.h"
 
-/* declare the external irc socket */
+/* the external irc socket */
 extern sock_info *irc;
 
 #define CHANSERV_TOPIC_CHANGED        "Topic in %s was changed to \"%s\""
+#define CHANSERV_TOPIC_STRICT         "Channel has strict topic enabled, only people with level %d or more can change topic."
 
 /**************************************************************************************************
  * chanserv_topic
@@ -55,7 +58,7 @@ FUNC_COMMAND(chanserv_topic)
   chanserv_dbase_channel *ch;
   char *chan  = getnext(params); /* getting channel name */
   char *topic = getrest(params); /* getting rest of the incomming string (topic) and saves it in topic */
-  char buf[BUFFER_SIZE];
+  char buf[BUFFER_SIZE], buf2[BUFFER_SIZE];
 
   /* displays syntax if chan or topic is not given */
   if (!chan || !topic) 
@@ -69,12 +72,25 @@ FUNC_COMMAND(chanserv_topic)
 
   /* verify that the user has sufficient access in that channel to set topic */
   if (!chanserv_dbase_check_access(from->nickserv, ch, command_info->level)) return ERROR_NO_ACCESS;
+  
+  if (ch->flags & BITS_CHANSERV_STRICTTOPIC)
+  {
+    if (!chanserv_dbase_check_access(from->nickserv, ch, CHANSERV_LEVEL_SET))
+      return com_message(sock, conf->cs->numeric, from->numeric, format, CHANSERV_TOPIC_STRICT, CHANSERV_LEVEL_SET);
+  }
 
   /* Looks like everything is allright, change the topic */
   com_send(irc, "%s T %s :%s\n", conf->cs->numeric, chan, topic);
   
-  /* Log the chanserv command */
+  ch->topic = (char*)xrealloc(ch->topic, SIZEOF_CHAR * (strlen(topic) + 1));
+  strcpy(ch->topic, topic);
+
+  /* Save in the database */  
   strcpy(buf, queue_escape_string(chan));
+  snprintf(buf2, BUFFER_SIZE, "UPDATE chandata SET topic='%s' WHERE name='%s'", queue_escape_string(topic), buf);
+  queue_add(buf2);  
+  
+  /* Log the chanserv command */
   log_command(LOG_CHANSERV, from, "TOPIC", "%s %s", buf, queue_escape_string(topic));
 
   /* inform the user that topic has been changed */

@@ -1,0 +1,11 @@
+Syntax: BROADCAST <USERS|ANONYMOUS|OPERS> <message>
+   
+Broadcast sends a message to all connected users or opers, depending
+on the first parameter. USERS sends to all users, stating which oper
+issued the broadcast, ANONYMOUS does the same, but hides the oper.
+OPERS sends a message to all online opers, which is users that have
+umode +o or are currently authed and have OPER ON.
+
+Only oper with access +a or higher can send anonymous broadcast.
+    
+SEE ALSO:

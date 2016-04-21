@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: ghost.c,v 1.3 2003/03/01 16:47:08 cure Exp $ */
+/* $Id: ghost.c,v 1.4 2004/01/16 15:53:20 mr Exp $ */
 
 #include <string.h>
 
@@ -64,7 +64,8 @@ FUNC_COMMAND(nickserv_ghost)
   /* is the specified nick regged */
   if (!(data = nickserv_dbase_find_nick(nick))) return com_message(sock, conf->ns->numeric, from->numeric, format, NICKSERV_NOT_REGISTERED, nick);
   /* is the specified password the correct password for the specified nick */
-  if (strcmp(data->password, ircd_crypt(pass, data->password))) return com_message(sock, conf->ns->numeric, from->numeric, format, NICKSERV_WRONG_PASSWORD);
+  if (password_compare(data, pass))
+    return com_message(sock, conf->ns->numeric, from->numeric, format, NICKSERV_WRONG_PASSWORD);
 
   /* anyone online with nick? */
   if ((ns = nicks_getinfo(NULL, nick, -1)))

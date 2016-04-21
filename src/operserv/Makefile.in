@@ -1,10 +1,12 @@
 # Makefile
-# $Id: Makefile.in,v 1.1 2003/02/21 23:16:56 mr Exp $
+# $Id: Makefile.in,v 1.7 2004/08/05 00:03:26 mr Exp $
 #
 
 CC=@CC@
 INCLUDE=-I../../include
 CFLAGS=@DEBUG@ -pipe -Wall ${INCLUDE} @CFLAGS@
+EXEEXT=@EXEEXT@
+OBJEXT=@OBJEXT@
 
 SRC = \
         access.c \
@@ -12,14 +14,19 @@ SRC = \
         die.c \
         gline.c \
         help.c \
+        ignores.c \
+        killchan.c \
         mode.c \
         op.c \
         operlist.c \
         remoper.c \
+        netinfo.c \
+        ignores.c \
         trace.c \
+        sql.c \
         ungline.c
 
-OBJS = ${SRC:%.c=%.o}
+OBJS = ${SRC:%.c=%.@OBJEXT@}
 
 all: info comp
 
@@ -33,10 +40,13 @@ info:
 comp: ${OBJS}
 
 
-.SUFFIXES: .c .o
+.SUFFIXES: .c .@OBJEXT@
 
-.c.o:
+.c.@OBJEXT@:
 	${CC} ${CFLAGS} -c $< -o $@
 
 clean:
-	rm -f *.o
+	rm -f *.@OBJEXT@
+
+distclean:
+	@rm -f Makefile

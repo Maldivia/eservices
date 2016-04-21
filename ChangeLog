@@ -1,5 +1,373 @@
 Exiled.net IRC Services.
-ChangeLog ($Id: ChangeLog,v 1.41 2003/03/01 16:52:05 mr Exp $)
+ChangeLog ($Id: ChangeLog,v 1.62 2004/08/06 17:59:44 mr Exp $)
+
+06/08/2004 Michael Rasmussen <the_real@nerdheaven.dk>
+ * src/parser.c
+   include/setup.h
+                    Added option for limiting service use to
+                    opers only, by defining SERVICES_OPER_ONLY.
+
+05/08/2004 Michael Rasmussen <the_real@nerdheaven.dk>
+ * src/operserv/killchan.c
+   include/operserv.h
+   include/msg.h
+   help/operserv/killchan
+                    Added KILLCHAN command.
+                    Restricted SQL command to DCC only.
+ * Makefile.in
+   src/Makefile.in
+   src/operserv/Makefile.in
+   src/chanserv/Makefile.in
+   src/nickserv/Makefile.in
+   src/multiserv/Makefile.in
+                    Added removal of Makefile in distclean.
+
+01/08/2004 Michael Rasmussen <the_real@nerdheaven.dk>
+ * src/operserv/gline.c
+   include/operserv.h
+   help/operserv/gline
+                    Added option for specifying a nick instead of
+                    user@host in GLINE command.
+                    Nick for opers are not valid.
+                    
+27/04/2004 Morten Post <cure@nerdheaven.dk>
+ * src/operserv/ignores.c
+   include/msg.h
+   include/operserv.h
+                    Added IGNORES command to show who is currently
+                    ignored by services.
+ * src/nickserv/grep.c
+   src/chanserv/grep.c
+   src/chanserv/info.c
+                    Style-fix and added compatability to the
+                    half-finished SET command.
+
+23/03/2004 Michael Rasmussen <the_real@nerdheaven.dk>
+ * src/errors.c
+   src/server.c
+   include/errors.h
+                    Added error code and message for ping timout.
+
+19/03/2004 Michael Rasmussen <the_real@nerdheaven.dk>
+ * src/server.c
+                    Decreased the timeout for select()
+ * src/p10.c
+   src/chanserv.c
+   include/chanserv.h
+                    Implemented checking of strict ops and strict topic,
+                    when mode changes, topic is changed and on burst.
+ * src/p10.c
+   src/server.c
+   include/setup.h
+   include/msg.h
+   include/p10.h
+                    Implemented ping/pong, for detection lost connection.
+ 
+
+17/03/2004 Michael Rasmussen <the_real@nerdheaven.dk>
+ * INSTALL
+                    Minor changes to the wording.
+ * dbase-structure
+                    Fixed a compatibility issue with mysql 3.23.
+ * src/nickserv/unreg.c
+                    Fixed bug preventing acocunts to be removed with unreg.
+ * src/misc_func.c
+   src/nickserv.c
+   src/nickserv/noexpire.c
+   src/nickserv/set.c
+   include/nickserv.h
+   include/misc_func.h
+                    Renamed and moved function to check on/off parameter
+                    from nickserv.c to misc_func.c.
+ * src/chanserv/topic.c
+   src/chanserv/set.c
+   include/dbase.h
+                    Implemented a set command for chanserv, currently
+                    with strict topic and strict ops.
+ * src/p10.c
+   include/setup.h
+                    Added #define, for disabling on-connect welcome
+                    message.
+                                                         
+22/01/2004 Michael Rasmussen <the_real@nerdheaven.dk>
+ * src/log.c
+                    Fixed core-dump bug, when starting services and
+                    config-file failed to load / didn't exists.
+
+17/01/2004 Michael Rasmussen <the_real@nerdheaven.dk>
+ * dbase-structure
+                    Added a generic admin-account.
+ * src/chanserv/chowner.c
+   src/chanserv/drop.c
+   src/chanserv/removeme.c
+   src/nickserv/drop.c
+                    Updated commands to use the updated password functions.
+
+17/01/2004 Morten Post <cure@nerdheaven.dk>
+ * include/msg.h
+   include/operserv.h
+   include/setup.h
+   src/Makefile.in
+   src/main.c
+   src/parser.c
+   src/server.c
+   src/operserv/Makefile.in
+   src/operserv/sql.c
+                    Added new sql queue system and a SQL command.
+
+ * include/chanserv.h
+   include/dbase.h
+   src/chanserv/Makefile.in
+   src/chanserv/info.c
+   src/chanserv/set.c
+                    Fixed a bug in INFO command and added prototypes for
+                    the SET command in chanserv.
+
+16/01/2004 Michael Rasmussen <the_real@nerdheaven.dk>
+ * src/nickserv/chpass.c
+   src/nickserv/ghost.c
+   src/nickserv/pass.c
+                    Updated commands to use the updated password functions.
+ * src/nickserv/chnick.c
+                    Updated incorrect confirmation-string.
+ * Makefile.in
+   src/Makefile.in
+   src/nickserv/Makefile.in
+   src/chanserv/Makefile.in
+   src/operserv/Makefile.in
+   src/multiserv/Makefile.in
+                    Updated for support for older versions of make.
+
+16/01/2004 Morten Post <cure@nerdheaven.dk>
+ * src/chanserv/chowner.c
+   src/operserv/netinfo.c
+   src/operserv/gline.c
+                    Introduced format_time() function and fixed a bug
+                    in CHOWNER.
+
+14/01/2004 Michael Rasmussen <the_real@nerdheaven.dk>
+ * src/nickserv/chnick.c
+                    Fixed bug so the nick would actually be changed, and
+                    mysql would be updated correctly.
+ * Makefile.in
+   src/Makefile.in
+   src/nickserv/Makefile.in
+   src/chanserv/Makefile.in
+   src/operserv/Makefile.in
+   src/multiserv/Makefile.in
+                    Added better support for systems with exec-suffixes
+                    and object suffixes other than .o
+                    Fixed make error complaining about missing version.c
+
+
+09/01/2004 Morten Post <cure@nerdheaven.dk>
+ * src/misc_func.c  
+   include/misc_func.c
+                    Added a function to convert a x secs into a readable
+                    time format.
+ * src/p10.c
+   src/operserv/netinfo.c
+   src/operserv/Makefile.in
+   include/operserv.h
+   include/msg.h
+                    Added a new command NETINFO to operserv.
+ * src/chanserv/list.c
+                    Added a counter to the function.
+
+09/01/2004 Michael Rasmussen <the_real@nerdheaven.dk>
+ * services.conf-dist
+                    Added BIND to the example-conf.
+ * src/misc_func.c
+   src/nickserv.c
+                    Fixed registration of nicks to generate
+                    SHA1 passwords, if SHA1 activated.
+ * src/nickserv/unreg.c
+                    Added block for forcefully unregging
+                    and oper, remoper should be used first.
+ * src/operserv/remoper.c
+                    Added block for removing opers with
+                    higher access.
+ * src/operserv/operlist.c
+                    Added (DCC) field for opers with P-flag.
+ * TODO
+                    Removed BIND from todo.
+                    Added IPv6 support as low priority.
+
+08/01/2004 Michael Rasmussen <the_real@nerdheaven.dk>
+ * configure.ac
+   defines.h.in
+   src/misc_func.c
+   src/nickserv.c
+                    Added SHA1 password rutine using OpenSSL libs.
+                    Using SHA1 by default if include file exists.
+ * src/chanserv/unban.c
+                    Fixing crash-bug, using a pointer after it's
+                    been freed.
+
+07/01/2004 Morten Post <cure@nerdheaven.dk>
+ * include/msg.h
+                    Removed all non-administrative commands from the dcc
+                    interface.
+ * src/chanserv/banlist.c
+                    Made it prettier.
+ * src/chanserv/autoop.c
+                    Fixed bug when no nickname was given.
+
+22/12/2003 Michael Rasmussen <the_real@nerdheaven.dk>
+ * src/nickserv/set.c
+                    Fixed bug with escaping info text before saving in
+                    internal database, so ex ' would be prepended with a \.
+ * src/chanserv.c                    
+                    Fixed ! bug in chanserv_dbase_burst_join.
+
+20/10/2003 Morten Post <cure@nerdheaven.dk>
+ * src/nicks.c
+   src/channels.c
+   src/misc_func.c
+   include/misc_func.h
+                    Fixed some conflicting types with the mysql API and
+                    LIST* types.
+ * src/nickserv/comment.c
+                    Fixed a typo: if (smd) -> if (cmd)
+
+10/09/2003 Michael Rasmussen <the_real@nerdheaven.dk>
+ * src/operserv.c
+   include/operserv.c
+                    Changed operserv_valid_gline to actually check for a
+                    valid gline. Lowered required non-wildcard chars. to 3.
+
+02/09/2003 Michael Rasmussen <the_real@nerdheaven.dk>
+ * src/chanserv.c
+                    Fixed a bug in the chanserv_dbase_resync_channel
+                    where chanserv wouldn't part unregged channels after
+                    resynching due to it sending wrong P10 code.
+ * src/chanserv/comment.c
+ * src/nickserv/comment.c
+                    Fixed core-dump bug when not specifying 2nd parameter.
+                    Defaulting to LIST if 2nd parameter is not specified.                    
+
+19/08/2003 Michael Rasmussen <the_real@nerdheaven.dk>
+ * src/chanserv/access.c
+                    Fixed display bug when changing access level for
+                    users with autoop in that channel.
+
+27/07/2003 Michael Rasmussen <the_real@nerdheaven.dk>
+ * src/multiserv/stats.c
+                    Added the mising code for the stats command, which
+                    apparently was forgotten when the function was moved
+                    to seperate files.
+
+22/07/2003 Michael Rasmussen <the_real@nerdheaven.dk>
+ * src/operserv/broadcast.c
+   include/operserv.h
+   help/operserv/broadcast
+                    Added an option for broadcasting anonymously.
+                    Added helpfile for broadcast.
+                    
+19/07/2003 Michael Rasmussen <the_real@nerdheaven.dk>
+ * help/nickserv/drop
+                    Fixed a typo.
+ * src/nickserv/forbid.c
+                    Fixed a typo in a string.
+                    Changed to start with an access check.
+ * src/nickserv/whois.c
+                    Added missing parameter to a com_message-statement.
+ * src/nickserv/unreg.c
+   src/nickserv/Makefile.in
+   include/nickserv.h
+   include/msg.h
+   help/nickserv/unreg   
+                    Added function to forcefully remove a registered nick.
+
+16/07/2003 Michael Rasmussen <the_real@nerdheaven.dk>
+ * src/nickserv/noexpire.c
+   src/nickserv/chnick.c
+   src/nickserv/Makefile.in
+   include/nickserv.h
+   include/msg.h
+   help/nickserv/noexpire
+   help/nickserv/chnick   
+                    Added the noexpire and chnick NickServ commands.
+ * src/db_server.c
+   src/help.c
+   src/log.c
+   src/nickserv.c
+   src/p10.c
+   src/parser.c
+   src/server.c   
+   include/db_server.h
+   include/help.h
+   include/nickserv.h   
+   include/p10.h
+   include/parser.h
+   include/server.h
+                    Added some "const" keywords
+
+15/06/2003 Michael Rasmussen <the_real@nerdheaven.dk>
+ * src/misc_func.c
+   include/misc_func.h
+   include/setup.h
+                    Added some list_* functions, which are used to create
+                    the arrays used various places, and to add, remove items
+                    from the lists, aswell as resising them.
+                    The list preallocates 1024 elements in the list - can be
+                    changed in a define in setup.h
+ * src/nicks.c
+   src/channels.c
+   src/db_server.c
+   src/main.c
+   include/nicks.h
+                    Implemented the use of list_*.
+                    
+ * src/chanserv.c
+                    Changed the userdata for ChanServ, as it is represented
+                    in the enternal database (no longer reads "This is me", but
+                    now the correct nick instead)
+
+28/05/2003 Michael Rasmussen <the_real@nerdheaven.dk>
+ * src/chanserv/op.c
+ * src/chanserv/deop.c
+ * src/chanserv/voice.c
+ * src/chanserv/devoice.c
+                    Changed the use on snprintf to strncat, to make
+                    it work probably on systems, which doesn't support
+                    that dest and parameters are the same.
+ * src/log.c
+                    Added test for HAVE_TM_ZONE (defined by configure).
+                    id TM_ZONE is not found, uses GMT and gmtime.
+
+ * include/server.h
+ * src/server.c
+ * src/main.c
+ * src/dcc.c
+                    Changed the implementation of com_create to accept
+                    a second parameter, specifying whether or not the
+                    newly created sock_info should be added to the array
+                    of sock_info or not. Added the function com_sock_attach
+                    to add a sock_info to the array later.
+ 
+ * configure.ac
+ * defines.h.in
+ * src/misc_func.c
+                    Added test for header file crypt.h, for systems which 
+                    defines crypt() in crypt.h instead of unistd.h.
+                    Added test for libz, which mysql requires on some systems.                    
+ * src/queue.c
+                    Added include of sys/time.h, which some systems require.
+ * src/help.c
+                    Changed help file loading rutine to use stat() instead of
+                    dp->d_type, which hopefully should be more portable.
+
+01/04/2003 Morten Post <cure@nerdheaven.dk>
+ * src/chanserv/grep.c
+ * src/nickserv/grep.c
+ * src/nickserv/Makefile.in
+                    Changed the existing GREP command in chanserv. Now
+                    exists both in nickserv and chanserv. Added the new
+                    grep.c in nickserv to Makefile.
+
+ * ./*            
+                    We're in a new year now. Updated copyright info.
 
 01/03/2003 Michael Rasmussen <the_real@nerdheaven.dk>
  * src/dbase.c

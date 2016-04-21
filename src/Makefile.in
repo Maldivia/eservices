@@ -1,10 +1,12 @@
 # Makefile
-# $Id: Makefile.in,v 1.2 2003/02/21 23:10:27 mr Exp $
+# $Id: Makefile.in,v 1.6 2004/08/05 00:03:25 mr Exp $
 #
 
 CC=@CC@
 INCLUDE=-I../include
 CFLAGS=@DEBUG@ -pipe -Wall ${INCLUDE} @CFLAGS@
+EXEEXT=@EXEEXT@
+OBJEXT=@OBJEXT@
 
 LDFLAGS=@LDFLAGS@
 LIBS=@LIBS@
@@ -31,32 +33,37 @@ SRC = \
         queue.c \
         server.c \
         timer.c \
+        sql.c \
         version.c
 
 
-OBJS = ${SRC:%.c=%.o}
+OBJS = ${SRC:%.c=%.@OBJEXT@}
 
-all: vers services
+all: services
 
-build: vers services
+build: services
 
-.SUFFIXES: .c .o
+.SUFFIXES: .c .@OBJEXT@
 
-.c.o:
+.c.@OBJEXT@:
 	${CC} ${CFLAGS} -c $< -o $@
+
+version.c: vers
 
 vers:
 	@echo ""
-	@echo "*               Generate BUILD and OS information                    *"
+	@echo "*               Generating BUILD and OS information                  *"
 	@echo " \`------------------------------------------------------------------´"
 	@echo "char *build_date = \"`date`\";" > version.c
 	@echo "char *os_name    = \"`uname -srm`\";" >> version.c
 	@cat version.c
+
+objintro:
 	@echo ""
 	@echo "*                      Building object files                         *"
 	@echo " \`------------------------------------------------------------------´"
 
-services: ${OBJS}
+services: objintro ${OBJS}
 	@cd nickserv; make all; cd ..
 	@cd chanserv; make all; cd ..
 	@cd operserv; make all; cd ..
@@ -64,8 +71,8 @@ services: ${OBJS}
 	@echo ""
 	@echo "*                    Linking the object files                        *"
 	@echo " \`------------------------------------------------------------------´"
-	${CC} ${CFLAGS} ${OBJS} nickserv/*.o chanserv/*.o operserv/*.o multiserv/*.o ${LDFLAGS} ${LIBS} -o services
-	cp services ..
+	${CC} ${CFLAGS} ${OBJS} nickserv/*.@OBJEXT@ chanserv/*.@OBJEXT@ operserv/*.@OBJEXT@ multiserv/*.@OBJEXT@ ${LDFLAGS} ${LIBS} -o services@EXEEXT@
+	cp services@EXEEXT@ ..
 	@echo ""
 	@echo "*                             Done!                                  *"
 	@echo " \`------------------------------------------------------------------´"
@@ -73,9 +80,17 @@ services: ${OBJS}
 clean:
 	@echo "*                     Removing object files                          *"
 	@echo " \`------------------------------------------------------------------´"
-	rm -f services *.o
+	@rm -f services@EXEEXT@ *.@OBJEXT@
+	@rm -f version.c
 	@cd nickserv; make clean; cd ..
 	@cd chanserv; make clean; cd ..
 	@cd operserv; make clean; cd ..
 	@cd multiserv; make clean; cd ..
+
+distclean:
+	@cd nickserv; make distclean; cd ..
+	@cd chanserv; make distclean; cd ..
+	@cd operserv; make distclean; cd ..
+	@cd multiserv; make distclean; cd ..
+	@rm -f Makefile
 

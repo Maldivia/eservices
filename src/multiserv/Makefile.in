@@ -1,17 +1,19 @@
 # Makefile
-# $Id: Makefile.in,v 1.1 2003/02/21 23:17:25 mr Exp $
+# $Id: Makefile.in,v 1.4 2004/08/05 00:03:29 mr Exp $
 #
 
 CC=@CC@
 INCLUDE=-I../../include
 CFLAGS=@DEBUG@ -pipe -Wall ${INCLUDE} @CFLAGS@
+EXEEXT=@EXEEXT@
+OBJEXT=@OBJEXT@
 
 
 SRC = \
 	help.c \
 	stats.c
 
-OBJS = ${SRC:%.c=%.o}
+OBJS = ${SRC:%.c=%.@OBJEXT@}
 
 all: info comp
 
@@ -24,10 +26,13 @@ info:
 
 comp: ${OBJS}
 
-.SUFFIXES: .c .o
+.SUFFIXES: .c .@OBJEXT@
 
-.c.o:
+.c.@OBJEXT@:
 	${CC} ${CFLAGS} -c $< -o $@
 
 clean:
-	rm -f *.o
+	rm -f *.@OBJEXT@
+
+distclean:
+	@rm -f Makefile

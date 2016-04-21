@@ -1,7 +1,7 @@
 /****************************************************************************
 * Exiled.net IRC Services                                                   *
-* Copyright (C) 2002  Michael Rasmussen <the_real@nerdheaven.dk>            *
-*                     Morten Post <cure@nerdheaven.dk>                      *
+* Copyright (C) 2002-2003  Michael Rasmussen <the_real@nerdheaven.dk>       *
+*                          Morten Post <cure@nerdheaven.dk>                 *
 *                                                                           *
 * This program is free software; you can redistribute it and/or modify      *
 * it under the terms of the GNU General Public License as published by      *
@@ -17,7 +17,9 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: dcc.c,v 1.8 2003/02/18 14:47:30 cure Exp $ */
+/* $Id: dcc.c,v 1.10 2003/05/28 19:17:02 mr Exp $ */
+
+#include "setup.h"
 
 #include <stdlib.h>
 #include <stdio.h>
@@ -30,7 +32,6 @@
 #include <sys/time.h>
 #include <sys/socket.h>
 
-#include "setup.h"
 #include "server.h"
 #include "config.h"
 #include "misc_func.h"
@@ -54,6 +55,7 @@ extern char *os_name;
 extern sock_info *irc;
 extern int com_sock_array_count;
 extern sock_info **com_sock_array;
+extern pthread_mutex_t sock_mutex; 
 
 extern struct parser_command_data parser_dcc_commands[];
   
@@ -202,6 +204,7 @@ FUNC_COMMAND(dcc_who)
   
   com_message(sock, NULL, NULL, NULL, "Users currently logged into the DCC interface:");
   
+  pthread_mutex_lock(&sock_mutex); 
   for (i = 0; i < com_sock_array_count; i++)
   {
     if (com_sock_array[i]->type == SOCK_DCC)
@@ -210,6 +213,7 @@ FUNC_COMMAND(dcc_who)
       com_message(sock, NULL, NULL, NULL, "   %-9s (%s)", com_sock_array[i]->from->nickserv->nick, operserv_flags_to_title(com_sock_array[i]->from->nickserv->flags, access));
     }
   }
+  pthread_mutex_unlock(&sock_mutex);
 
   log_command(LOG_OPERSERV, sock->from, "[DCC] WHO", "");
 
@@ -360,7 +364,7 @@ void *dcc_init(void *arg)
     return 0;
   }
   
-  if (!(sock = com_sock_create(SOCK_DCC)))
+  if (!(sock = com_sock_create(SOCK_DCC, 0)))
   {
     xfree(args->num);
     xfree(args);
@@ -384,12 +388,16 @@ void *dcc_init(void *arg)
 
   xfree(args->num);
   xfree(args);
+  
+  com_sock_attach(sock);
+  
   return 0;
 }
 
 void dcc_free(dbase_nicks *nick)
 {
   int i;
+  pthread_mutex_lock(&sock_mutex); 
   for (i = 0; i < com_sock_array_count; i++)
   {
     if ((com_sock_array[i]->type == SOCK_DCC) && (com_sock_array[i]->from == nick))
@@ -398,6 +406,7 @@ void dcc_free(dbase_nicks *nick)
       i--;
     }
   }  
+  pthread_mutex_unlock(&sock_mutex);
 }
 
 void dcc_to_all(sock_info *from, char *str, ...)
@@ -413,6 +422,7 @@ void dcc_to_all(sock_info *from, char *str, ...)
   vsnprintf(buf, 2*BUFFER_SIZE, str, ag);
   va_end(ag);
   
+  pthread_mutex_lock(&sock_mutex); 
   for (i = 0; i < com_sock_array_count; i++)
   {
     if ((com_sock_array[i]->type == SOCK_DCC) && (com_sock_array[i] != from))
@@ -420,6 +430,7 @@ void dcc_to_all(sock_info *from, char *str, ...)
       com_message(com_sock_array[i], NULL, NULL, NULL, buf);
     }
   }
+  pthread_mutex_unlock(&sock_mutex);
 }
 
 
@@ -443,6 +454,7 @@ void dcc_console_text(char mode, char *str, ...)
   vsnprintf(buf, 2*BUFFER_SIZE, str, ag);
   va_end(ag);
   
+  pthread_mutex_lock(&sock_mutex); 
   for (i = 0; i < com_sock_array_count; i++)
   {
     if ((com_sock_array[i]->type == SOCK_DCC) && (com_sock_array[i]->from))
@@ -451,4 +463,5 @@ void dcc_console_text(char mode, char *str, ...)
         com_message(com_sock_array[i], NULL, NULL, NULL, "[+%c] %s", mode, buf);
     }
   }
+  pthread_mutex_unlock(&sock_mutex);
 }

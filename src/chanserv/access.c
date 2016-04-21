@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: access.c,v 1.4 2003/03/01 16:47:04 cure Exp $ */
+/* $Id: access.c,v 1.6 2003/10/19 22:23:33 mr Exp $ */
 
 #include <stdio.h>
 #include <string.h>
@@ -85,7 +85,7 @@ FUNC_COMMAND(chanserv_access)
 
   if (data->level < command_info->level) return ERROR_NO_ACCESS;
   
-  cmd = uppercase(cmd);
+  if (cmd) cmd = uppercase(cmd);
 
   strcpy(safe, queue_escape_string(chan));
 
@@ -138,8 +138,8 @@ FUNC_COMMAND(chanserv_access)
         queue_add(buf);
 
         log_command(LOG_CHANSERV, from, "ACCESS", "%s SET %s %d", safe, queue_escape_string(nick), level);
-        nickserv_dbase_notice(acc->nick, "Your access on %s has been changed to %d by %s.", chan, lvl, from->nickserv->nick);
-        return com_message(sock, conf->cs->numeric, from->numeric, format, CHANSERV_ACCESS_CHANGED, nick, chan, lvl);
+        nickserv_dbase_notice(acc->nick, "Your access on %s has been changed to %d by %s.", chan, level, from->nickserv->nick);
+        return com_message(sock, conf->cs->numeric, from->numeric, format, CHANSERV_ACCESS_CHANGED, nick, chan, level);
       }
     }
     if ((nick_info = nickserv_dbase_find_nick(nick)))

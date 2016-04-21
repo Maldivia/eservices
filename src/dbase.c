@@ -1,7 +1,7 @@
 /****************************************************************************
 * Exiled.net IRC Services                                                   *
-* Copyright (C) 2002  Michael Rasmussen <the_real@nerdheaven.dk>            *
-*                     Morten Post <cure@nerdheaven.dk>                      *
+* Copyright (C) 2002-2003  Michael Rasmussen <the_real@nerdheaven.dk>       *
+*                          Morten Post <cure@nerdheaven.dk>                 *
 *                                                                           *
 * This program is free software; you can redistribute it and/or modify      *
 * it under the terms of the GNU General Public License as published by      *
@@ -17,13 +17,13 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: dbase.c,v 1.4 2003/03/01 16:52:08 mr Exp $ */
+/* $Id: dbase.c,v 1.5 2003/04/15 20:41:17 cure Exp $ */
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <time.h>
 #include <mysql.h>
-#include <string.h>
 
 #include "setup.h"
 #include "dbase.h"
@@ -141,12 +141,12 @@ int dbase_load_persistant(void)
  
     if (!who) continue;
     
-    who->notices = (dbase_comment**)realloc(who->notices, (++who->notice_count) * SIZEOF_VOIDP);
-    who->notices[who->notice_count-1] = (dbase_comment*)malloc(sizeof(dbase_comment));
+    who->notices = (dbase_comment**)xrealloc(who->notices, (++who->notice_count) * SIZEOF_VOIDP);
+    who->notices[who->notice_count-1] = (dbase_comment*)xmalloc(sizeof(dbase_comment));
   
     who->notices[who->notice_count-1]->date = tr_atoi(row[3]);
-    who->notices[who->notice_count-1]->nick = (char*)malloc(strlen(row[1]) + SIZEOF_CHAR);
-    who->notices[who->notice_count-1]->comment = (char*)malloc(strlen(row[2]) + SIZEOF_CHAR);
+    who->notices[who->notice_count-1]->nick = (char*)xmalloc(strlen(row[1]) + SIZEOF_CHAR);
+    who->notices[who->notice_count-1]->comment = (char*)xmalloc(strlen(row[2]) + SIZEOF_CHAR);
 
     strcpy(who->notices[who->notice_count-1]->nick, row[1]);
     strcpy(who->notices[who->notice_count-1]->comment, row[2]);

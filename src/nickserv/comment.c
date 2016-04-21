@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: comment.c,v 1.3 2003/03/01 16:47:08 cure Exp $ */
+/* $Id: comment.c,v 1.5 2003/10/20 11:48:17 cure Exp $ */
 
 #include <string.h>
 
@@ -73,7 +73,7 @@ FUNC_COMMAND(nickserv_comment)
   if (!operserv_have_access(from->nickserv->flags, command_info->flags)) return ERROR_NO_ACCESS;
   
   /* enough parameters */
-  if (!nick || !cmd) return com_message(sock, conf->ns->numeric, from->numeric, format, command_info->syntax);
+  if (!nick) return com_message(sock, conf->ns->numeric, from->numeric, format, command_info->syntax);
   
   /* check if the nick is registered */
   if (!(ns = nickserv_dbase_find_nick(nick))) return com_message(sock, conf->ns->numeric, from->numeric, format, NICKSERV_NOT_REGISTERED, nick);
@@ -81,10 +81,11 @@ FUNC_COMMAND(nickserv_comment)
   strcpy(buf, queue_escape_string(ns->nick));
 
   /* uppercase cmd - if specified */
-  cmd = uppercase(cmd);
+  if (cmd)
+    cmd = uppercase(cmd);
 
   /* is cmd = LIST or not specified */
-  if (!strcmp(cmd, "LIST"))
+  if ((!cmd) || (!strcmp(cmd, "LIST")))
   {
     int i;
     struct tm *td;

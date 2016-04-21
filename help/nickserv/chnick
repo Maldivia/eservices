@@ -1,0 +1,10 @@
+Syntax: CHNICK <nickname> <new nickname>
+    
+This command can be used to change the nickname for an account.
+This should only be used under very special circumstances.
+The user must bee logged in to the account in question and
+noone may be logged in as the new nick, and the new nick must
+not already be registeret.
+     
+SEE ALSO:
+  

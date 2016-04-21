@@ -1,7 +1,7 @@
 /****************************************************************************
 * Exiled.net IRC Services                                                   *
-* Copyright (C) 2002  Michael Rasmussen <the_real@nerdheaven.dk>            *
-*                     Morten Post <cure@nerdheaven.dk>                      *
+* Copyright (C) 2002-2003  Michael Rasmussen <the_real@nerdheaven.dk>       *
+*                          Morten Post <cure@nerdheaven.dk>                 *
 *                                                                           *
 * This program is free software; you can redistribute it and/or modify      *
 * it under the terms of the GNU General Public License as published by      *
@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: parser.c,v 1.9 2003/03/01 16:47:02 cure Exp $ */
+/* $Id: parser.c,v 1.13 2004/08/06 17:59:48 mr Exp $ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -110,16 +110,21 @@ int parser_p10(sock_info *sock, char *str)
  *   [OUT] int <result> - 0 if success, else error-nr
  **************************************************************************************************
  */
-int parser_commands(sock_info *sock, char *to, char **params, char *from, char *format)
+int parser_commands(sock_info *sock, const char *to, char **params, const char *from, const char *format)
 {
   char notice[2] = "O", privmsg[2] = "P";
-  char *cmd, num[4], nick[20] = "", *informat = format;
+  char *cmd, num[4], nick[20] = "";
+  const char *informat = format;
   struct parser_command_data *cmds = NULL;
   dbase_nicks *info = nicks_getinfo(from, NULL, -1);
   if (!info) return 0;
 
   /* is this user ignored */
   if (info->ignored) return 0;
+
+#ifdef SERVICES_OPER_ONLY
+  if (!isbiton(info->modes, 'o'-'a')) return 0;
+#endif
 
   /* set the correct return-format */
   format = notice;
@@ -220,7 +225,7 @@ int parser_commands(sock_info *sock, char *to, char **params, char *from, char *
     dcc_console_text('s', "[%s!%s@%s] %s: unknown command: %s", info->nick, info->username, info->host, nick, cmd);
 
 
-  return com_message(sock, to, info->numeric, format, "Unknown command.");
+  return com_message(sock, to, info->numeric, format, "What?");
 }
 
 /*
@@ -262,7 +267,7 @@ int parser_dcc(sock_info *sock, char *str)
     dcc_console_text('s', "[%s!%s!%s@%s] [DCC] unknown command: %s %s", sock->from->nickserv->nick, sock->from->nick, sock->from->username, sock->from->host, cmd, *params);
   else
     dcc_console_text('s', "[%s!%s!%s@%s] [DCC] unknown command: %s", sock->from->nickserv->nick, sock->from->nick, sock->from->username, sock->from->host, cmd);
-  return com_message(sock, NULL, NULL, NULL, "Unknown command.");
+  return com_message(sock, NULL, NULL, NULL, "What?");
 }
 
 /*
@@ -279,7 +284,7 @@ int parser_dcc(sock_info *sock, char *str)
  *   [OUT] int <result> - 0 if success, else error-nr
  **************************************************************************************************
  */
-int parser_ctcp(sock_info *sock, char *to, char **params, dbase_nicks *from)
+int parser_ctcp(sock_info *sock, const char *to, char **params, dbase_nicks *from)
 {
   char *cmd = getnext(params);
   
@@ -325,9 +330,9 @@ int parser_ctcp(sock_info *sock, char *to, char **params, dbase_nicks *from)
       
       lip = ((lip & 0xff) << 24) | (((lip >> 8) & 0xff) << 16) | (((lip >> 16) & 0xff) << 8) | ((lip >> 24) & 0xff);
         
-      args = (dcc_init_arg*)malloc(sizeof(dcc_init_arg));
+      args = (dcc_init_arg*)xmalloc(sizeof(dcc_init_arg));
       args->port = port;
-      args->num = (char*)malloc(strlen(from->numeric) + 1);
+      args->num = (char*)xmalloc(strlen(from->numeric) + 1);
       strcpy(args->num, from->numeric);
       args->ip = lip;
       pthread_create(&tread, NULL, dcc_init, args);
@@ -336,7 +341,7 @@ int parser_ctcp(sock_info *sock, char *to, char **params, dbase_nicks *from)
   return 0;
 }
 
-int parser_check_ignore(dbase_nicks *nick, char *to, char *format)
+int parser_check_ignore(dbase_nicks *nick, const char *to, const char *format)
 {
   if (nick->nickserv)
   {
@@ -356,13 +361,13 @@ int parser_check_ignore(dbase_nicks *nick, char *to, char *format)
 
       if ((nick->ignore_ts[1] - nick->ignore_ts[0]) <= IGNORE_TIME)
       {
-        timer_event *te = (timer_event*)malloc(sizeof(timer_event));
+        timer_event *te = (timer_event*)xmalloc(sizeof(timer_event));
 
         nick->ignored = 1;
         
         com_message(irc, to, nick->numeric, format, "Received %d messages within %d seconds, you are being ignored for %d seconds!", IGNORE_LINES, IGNORE_TIME, IGNORE_LENGTH);
         
-        te->data = malloc(strlen(nick->numeric) + 1);
+        te->data = xmalloc(strlen(nick->numeric) + 1);
         strcpy(te->data, nick->numeric);
         te->func = parser_remove_ignore;
         te->free = xfree;

@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: set.c,v 1.3 2003/03/01 16:47:08 cure Exp $ */
+/* $Id: set.c,v 1.5 2004/03/19 21:46:37 mr Exp $ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -77,9 +77,9 @@ FUNC_COMMAND(nickserv_set)
   {
     int res;
     /* try to parse the on/off parameter, returns 1 = off, 2 = on */
-    if ((res = nickserv_dbase_set_is_ok(para)))
+    if ((res = set_is_ok(para)))
     {
-      /* convert nickserv_dbase_set_is_ok to C-style true/false */
+      /* convert set_is_ok to C-style true/false */
       res--;
       /* Is the user trying to set oper on without being a global oper */
       if ((flag & BITS_NICKSERV_OPER) && (!isbiton(from->modes, 'o'-'a')))
@@ -102,7 +102,7 @@ FUNC_COMMAND(nickserv_set)
       return com_message(sock, conf->ns->numeric, from->numeric, format, NICKSERV_INVALID_EMAIL, para);
 
     /* Set the new email addres, and save it to the database */
-    from->nickserv->email = (char *)realloc(from->nickserv->email, strlen(para)+1);
+    from->nickserv->email = (char *)xrealloc(from->nickserv->email, strlen(para)+1);
     strcpy(from->nickserv->email, para);
     snprintf(buf, BUFFER_SIZE, "UPDATE nickdata SET email='%s' WHERE nick='%s'", para, queue_escape_string(from->nickserv->nick));
     queue_add(buf);
@@ -114,16 +114,17 @@ FUNC_COMMAND(nickserv_set)
   if (!strcmp(option, "INFO"))
   {
     char buf[BUFFER_SIZE];
+    char buf2[256];
     
     /* is the info-line too long ? */
     if (strlen(para) > 254) return com_message(sock, conf->ns->numeric, from->numeric, format, NICKSERV_SET_INFO_MAXLENGTH);
     
     /* set the new info line, and save it to the database */
-    para = queue_escape_string(para);
-    from->nickserv->info = (char *)realloc(from->nickserv->info, strlen(para)+1);
+    from->nickserv->info = (char *)xrealloc(from->nickserv->info, strlen(para)+1);
     strcpy(from->nickserv->info, para);
 
-    snprintf(buf, BUFFER_SIZE, "UPDATE nickdata SET info='%s' WHERE nick='%s'", from->nickserv->info, queue_escape_string(from->nickserv->nick));
+    queue_escape_string_buf(para, buf2);
+    snprintf(buf, BUFFER_SIZE, "UPDATE nickdata SET info='%s' WHERE nick='%s'", buf2, queue_escape_string(from->nickserv->nick));
     queue_add(buf);
     
     /* log the command, and return a confirmation to the user */

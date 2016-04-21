@@ -17,8 +17,9 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: unban.c,v 1.3 2003/03/01 16:47:05 cure Exp $ */
+/* $Id: unban.c,v 1.5 2004/01/09 00:15:42 cure Exp $ */
 
+#include <stdlib.h>
 #include <string.h>
 
 #include "chanserv.h"
@@ -75,18 +76,26 @@ FUNC_COMMAND(chanserv_unban)
   if (id >= ch->bancount) 
     return com_message(sock, conf->cs->numeric, from->numeric, format, CHANSERV_UNBAN_NO_SUCH_BAN_ID, id);  
 
-  com_message(sock, conf->cs->numeric, from->numeric, format, CHANSERV_BAN_REMOVED, chan, ch->bans[id]->mask, gmtime((time_t*)&ch->bans[id]->expire)); 
+  com_message(sock, conf->cs->numeric, from->numeric, format, CHANSERV_BAN_REMOVED, chan, ch->bans[id]->mask, gtime((time_t*)&ch->bans[id]->expire)); 
 
   /* we better log this */
   strcpy(mask, queue_escape_string(ch->bans[id]->mask));
   log_command(LOG_CHANSERV, from, "UNBAN", "%s %s", queue_escape_string(chan), mask);
 
-  /* removing ban from mysql */
-  chanserv_dbase_remove_enforce_ban(ch, id, 0, COMMIT_TO_MYSQL);   
+  {
+    char *p = (char *)xmalloc(strlen(ch->bans[id]->mask) + 1);
+    strcpy(p, ch->bans[id]->mask);
 
-  /* removing ban from internal database and from channel */
-  com_send(irc, "%s M %s -b %s\n", conf->cs->numeric, chan, ch->bans[id]->mask);
-  channels_remban(-1, chan, ch->bans[id]->mask);
+    /* removing ban from mysql */
+    chanserv_dbase_remove_enforce_ban(ch, id, 0, COMMIT_TO_MYSQL);   
+
+
+    /* removing ban from internal database and from channel */
+    com_send(irc, "%s M %s -b %s\n", conf->cs->numeric, chan, p);
+    channels_remban(-1, chan, p);
+
+    free(p);
+  }
 
   return 0;
 }

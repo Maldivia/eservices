@@ -1,5 +1,5 @@
 Exilen.Net IRC Services.
-TODO ($Id: TODO,v 1.14 2003/02/27 12:07:01 cure Exp $)
+TODO ($Id: TODO,v 1.25 2004/04/27 12:45:45 cure Exp $)
 
 ######################################################################
 Remember:
@@ -14,40 +14,27 @@ Remember:
   annoying features, please  report.
 ######################################################################
 
+[ ] Not begun
 [+] In progress
+[x] Done - still testing
 
 ##### HIGH PRIORITY ##################################################
 
-[X] Split up chanserv.c, operserv.c nickserv.c and multiserv.c into
-    smaller files. 
-    
 [+] Catch up on commenting *ugh*. 
 
-[ ] Implement the long awaited SET command in channel service.
+[+] Implement the long awaited SET command in channel service.
 
-[+] Split up GREP command. One for NickServ and one for ChanServ.
+[ ] Add multiple language support. And make the help system work.
+    It would be nice if we could implement something like %s in the
+    helpfile and then replace %s with COMMAND_NAME and use th strucure
+    from msg.h. In fact, rewrite the help system so help is level restricted
+    as well.
 
 ##### LOWER PRIORITY #################################################
-
-[+] Make it possible to set noexpire on channels and nicknames.
-    Currently only working for channels.
 
 [ ] Make it possible via a setting from setup.h to decide whether
     recently dropped channels can be registered again instantly.
 
-[ ] Have a look at operserv ACCESS command.
-
-[+] Auto-op, if deopped due to net-join after net-split.
-    Perhaps a function in OS to do a force-cycle on a channel.
-
-[ ] nickserv_info: Status must be either active/expired or disabled.
-
-[X] When unregging an expired or disabled channel -- don't make E
-    leave the channel as it is not there.
+[ ] IPv6 ready
 
 ##### IDEAS ##########################################################
-
-[ ] Make a command in chanserv to reg a channel to services.
-    ie. a possibility to reg official channels to a non-user nick,
-    and automatically setting the channel no-expire, and adding
-    the user issuing the command with level 499

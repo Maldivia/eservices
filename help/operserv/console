@@ -1,0 +1,36 @@
+CONSOLE [[+|-]modes]
+  
+You will be able to decide what information you wish to recieve in
+the DCC interface. The mode string can be omitted and your current
+console modes will be displayed.
+	    
+Valid modes are:
+  
+  +O access required:
+  c: DCC messages/Wallops messages.
+  n: Monitor nickname broadcasts. (create,change,quit...)
+  o: Monitor operups.
+  s: Monitor spam and unknown commands. 
+	     
+  +n access required:
+  u: Monitor user mode changes.
+  v: Monitor commands sent to nickserv.
+   
+  +c access required:
+  j: Monitor channel creations, joins, and parts. 
+  m: Monitor channel mode changes. 
+  t: Monitor topic changes.
+  w: Monitor commands sent to chanserv.
+  
+  +a access required:
+  b: Network broadcasts, such as net-joins and net-breaks.
+  x: Monitor commands sent to operserv.
+   
+  +D access required: 
+  d: Mostly raw data and debug information. Nothing interesting for
+     non-developers.
+	  
+This command is supposed to help opers, not help them abuse users.
+    
+SEE ALSO:
+  -

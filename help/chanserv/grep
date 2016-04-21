@@ -1,19 +1,13 @@
-Syntax: GREP <USER|CHAN> <mask>
+Syntax: GREP <type> <mask>
   
-This command allows you to search through the channel database or the
-user database. The <mask> argument can be used with wildcards. If you
-want to search the user database for email simply add the @ character
-to your mask.
+This command allows you to search through the channel database. 
+The <mask> argument can be used with wildcards. 
   
-Examples:
-  
-GREP USER c*    - This will list all nicks starting with a c.
-GREP USER c*@*  - This will list all nicks with an email starting 
-                  with a c.
-GREP CHAN *sex* - This will list all channels with sex in it. 
-  
-You can use the character '?' as a wildcard for exactly one 
-character.
+Type can be:
+             NAME (channel name)
+    
+"*" (without the quotes) represents a phrase of one or more letters.
+"?" (without the quotes) represents exactly one letter.
   
 SEE ALSO:
   -

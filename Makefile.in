@@ -1,13 +1,19 @@
 # Exiled.Net IRC Services
-# Makefile ($Id: Makefile.in,v 1.1 2003/02/21 23:10:23 mr Exp $)
+# Makefile ($Id: Makefile.in,v 1.4 2004/08/05 00:03:24 mr Exp $)
+
+EXEEXT=@EXEEXT@
+OBJEXT=@OBJEXT@
 
 all:
 	@cd src; make all; cd ..
 
 clean:
 	@cd src; make clean; cd ..
+	@rm -f services@EXEEXT@
 
 distclean: clean
-	rm -f config.cache config.log config.status
-	rm -rf autom4te.cache
+	@cd src; make distclean; cd ..
+	@rm -f config.cache config.log config.status
+	@rm -rf autom4te.cache
+	@rm -f Makefile
 

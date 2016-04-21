@@ -1,0 +1,7 @@
+Syntax: KILLCHAN <channel> <reason>
+
+KILLCHAN kills all users on the specified channel, except opers.
+The specified reason is used as kill message.
+
+SEE ALSO:
+  GLINE

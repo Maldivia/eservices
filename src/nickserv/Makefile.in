@@ -1,26 +1,32 @@
 # Makefile
-# $Id: Makefile.in,v 1.1 2003/02/21 23:16:17 mr Exp $
+# $Id: Makefile.in,v 1.6 2004/08/05 00:03:27 mr Exp $
 #
 
 CC=@CC@
 INCLUDE=-I../../include
 CFLAGS=@DEBUG@ -pipe -Wall ${INCLUDE} @CFLAGS@
+EXEEXT=@EXEEXT@
+OBJEXT=@OBJEXT@
 
 SRC = \
         auth.c \
+        chnick.c \
         chpass.c \
         comment.c \
+        grep.c \
         drop.c \
         forbid.c \
         ghost.c \
         help.c \
         info.c \
+        noexpire.c \
         pass.c \
         register.c \
         set.c \
+        unreg.c \
         whois.c
 
-OBJS = ${SRC:%.c=%.o}
+OBJS = ${SRC:%.c=%.@OBJEXT@}
 
 all: info comp
 
@@ -34,10 +40,13 @@ info:
 comp: ${OBJS}
 
 
-.SUFFIXES: .c .o
+.SUFFIXES: .c .@OBJEXT@
 
-.c.o:
+.c.@OBJEXT@:
 	${CC} ${CFLAGS} -c $< -o $@
 
 clean:
-	rm -f *.o
+	rm -f *.@OBJEXT@
+
+distclean:
+	@rm -f Makefile

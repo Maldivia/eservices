@@ -1,7 +1,7 @@
 /****************************************************************************
 * Exiled.net IRC Services                                                   *
-* Copyright (C) 2002  Michael Rasmussen <the_real@nerdheaven.dk>            *
-*                     Morten Post <cure@nerdheaven.dk>                      *
+* Copyright (C) 2002-2003  Michael Rasmussen <the_real@nerdheaven.dk>       *
+*                          Morten Post <cure@nerdheaven.dk>                 *
 *                                                                           *
 * This program is free software; you can redistribute it and/or modify      *
 * it under the terms of the GNU General Public License as published by      *
@@ -17,17 +17,24 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: queue.c,v 1.5 2003/03/01 16:47:02 cure Exp $ */
+/* $Id: queue.c,v 1.7 2003/05/28 19:18:28 mr Exp $ */
+
+#include "setup.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
+#ifdef HAVE_SYS_TYPES_H
 #include <sys/types.h>
+#endif
+#ifdef HAVE_SYS_TIME_H
+#include <sys/time.h>
+#endif
 #include <unistd.h>
 #include <mysql.h>
+#include <errmsg.h>
 
-#include "setup.h"
 #include "queue.h"
 #include "dbase.h"
 #include "misc_func.h"
@@ -48,9 +55,11 @@ void *queue_write(void *arg)
   struct timeval timeout;
   int res;
   MYSQL queue_mysql, *queue_conn;
+  my_bool reconnect = 1;
 
   mysql_init(&queue_mysql);
   mysql_options(&queue_mysql, MYSQL_OPT_COMPRESS, 0);
+  mysql_options(&queue_mysql, MYSQL_OPT_RECONNECT, &reconnect);
 
   queue_conn = mysql_real_connect(&queue_mysql, conf->mysql->host, conf->mysql->username, conf->mysql->password, conf->mysql->database, conf->mysql->port, conf->mysql->unixsock, 0);
   if (!queue_conn)
@@ -75,15 +84,39 @@ void *queue_write(void *arg)
       pthread_mutex_unlock(&mutex);
 
       res = mysql_query(queue_conn, current->command);
-      debug_out("[MYSQL] %s\n", current->command);
+      
       if (res)
       {
         log_command(LOG_SERVICES, NULL, "", "mySQL error: \"%s\"", current->command);
         log_command(LOG_SERVICES, NULL, "", "mySQL error: (%d) %s", res, mysql_error(queue_conn));
-      }
 
-      xfree(current->command);
-      xfree(current);
+        int myerr = mysql_errno(queue_conn);
+        /* Error occurred executing query */
+        if (myerr == CR_SERVER_GONE_ERROR || myerr == CR_SERVER_LOST)
+        {
+          mysql_close(queue_conn);
+          mysql_close(&queue_mysql);
+
+          pthread_mutex_lock(&mutex);
+
+          current->next = queue_next;
+          queue_next = current;
+
+          pthread_mutex_unlock(&mutex);
+
+          queue_conn = mysql_real_connect(&queue_mysql, conf->mysql->host, conf->mysql->username, conf->mysql->password, conf->mysql->database, conf->mysql->port, conf->mysql->unixsock, 0);
+          log_command(LOG_SERVICES, NULL, "", "Reconnecting to mySQL");
+        }
+        else {
+          xfree(current->command);
+          xfree(current);
+        }
+      }
+      else {
+        debug_out("[MYSQL] %s\n", current->command);
+        xfree(current->command);
+        xfree(current);
+      }
     }
     else
     {
@@ -101,9 +134,9 @@ void *queue_write(void *arg)
 int queue_add(const char *str)
 {
   struct queue_list *entry;
-  entry = (struct queue_list *)malloc(sizeof(struct queue_list));
+  entry = (struct queue_list *)xmalloc(sizeof(struct queue_list));
   entry->next = NULL;
-  entry->command = (char *)malloc(strlen(str)+1);
+  entry->command = (char *)xmalloc(strlen(str)+1);
   strcpy(entry->command, str);
 
   pthread_mutex_lock(&mutex);

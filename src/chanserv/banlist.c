@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: banlist.c,v 1.3 2003/03/01 16:47:04 cure Exp $ */
+/* $Id: banlist.c,v 1.4 2004/01/07 15:52:30 cure Exp $ */
 
 #include "chanserv.h"
 #include "operserv.h"
@@ -65,14 +65,16 @@ FUNC_COMMAND(chanserv_banlist)
   if (!ch->bancount && !info->bancount)
     return com_message(sock, conf->cs->numeric, from->numeric, format, CHANSERV_BANLIST_EMPTY, chan);
   
-  com_message(sock, conf->cs->numeric, from->numeric, format, CHANSERV_BANLIST_HEADER, chan);
-  
-  for (i = 0; i < ch->bancount; i++)
+  if (ch->bancount) 
   {
-    com_message(sock, conf->cs->numeric, from->numeric, format, "  %d) %s set by %s expiring: %s", i+1, ch->bans[i]->mask, ch->bans[i]->nick, gtime((time_t*)&ch->bans[i]->expire));
+    com_message(sock, conf->cs->numeric, from->numeric, format, CHANSERV_BANLIST_HEADER, chan);
+  
+    for (i = 0; i < ch->bancount; i++)
+      com_message(sock, conf->cs->numeric, from->numeric, format, "  %d) %s set by %s expiring: %s", i+1, ch->bans[i]->mask, ch->bans[i]->nick, gtime((time_t*)&ch->bans[i]->expire));
+    com_message(sock, conf->cs->numeric, from->numeric, format, "\n");    
   }
   
-  com_message(sock, conf->cs->numeric, from->numeric, format, "\nActive bans on %s:\n", chan);    
+  com_message(sock, conf->cs->numeric, from->numeric, format, "Active bans on %s:\n", chan);    
   
   for (i = 0; i < info->bancount; i++)
   {

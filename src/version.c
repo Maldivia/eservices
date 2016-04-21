@@ -1,2 +1,2 @@
-char *build_date = "Sun Dec 16 01:56:47 CET 2012";
-char *os_name    = "Linux 3.5.0-19-generic x86_64";
+char *build_date = "Tue Nov  1 08:56:26 UTC 2011";
+char *os_name    = "FreeBSD 8.2-PRERELEASE i386";

@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: drop.c,v 1.3 2003/03/01 16:47:04 cure Exp $ */
+/* $Id: drop.c,v 1.4 2004/01/17 14:47:19 mr Exp $ */
 
 #include <string.h>
 
@@ -71,19 +71,17 @@ FUNC_COMMAND(chanserv_drop)
     if (tmp->level >= CHANSERV_LEVEL_OWNER)
     {
       /* Did the user specify the correct password */
-      if (!strcmp(from->nickserv->password, ircd_crypt(pass, from->nickserv->password)))
-      {
-        /* unregister the channel */
-        chanserv_dbase_delete(tmp->channel);
+      if (password_compare(from->nickserv, pass))
+        return com_message(sock, conf->cs->numeric, from->numeric, format, CHANSERV_WRONG_PASSWORD);
+
+      /* unregister the channel */
+      chanserv_dbase_delete(tmp->channel);
                             
-        /* log the command */
-        log_command(LOG_CHANSERV, from, "DROP", "%s [hidden]", queue_escape_string(chan));
+      /* log the command */
+      log_command(LOG_CHANSERV, from, "DROP", "%s [hidden]", queue_escape_string(chan));
         
-        /* return message that channel was succesfully dropped */
-        return com_message(sock, conf->cs->numeric, from->numeric, format, CHANSERV_DROP_OK, chan);
-      }
-      /* Error about wrong password */
-      return com_message(sock, conf->cs->numeric, from->numeric, format, CHANSERV_WRONG_PASSWORD);
+      /* return message that channel was succesfully dropped */
+      return com_message(sock, conf->cs->numeric, from->numeric, format, CHANSERV_DROP_OK, chan);
     }
   }
   /* Error about insuficient level */

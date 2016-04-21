@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: access.c,v 1.2 2003/02/25 23:15:03 cure Exp $ */
+/* $Id: access.c,v 1.3 2004/01/17 02:17:21 cure Exp $ */
 
 #include <stdio.h>
 
@@ -68,6 +68,7 @@ FUNC_COMMAND(operserv_access)
     return com_message(sock, conf->os->numeric, from->numeric, format, OPERSERV_ACCESS_FLAGS, who, operserv_flags_to_str(data->flags, buf));
 
   if (data == from->nickserv) ; /* editing self - should something be done ? */
+                                /* cure jan 2004: no I don't think so as long as it can't be exploited? */
     
   f = operserv_str_to_flags(flags, data->flags, from->nickserv->flags);
     

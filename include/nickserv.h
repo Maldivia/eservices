@@ -1,7 +1,7 @@
 /****************************************************************************
 * Exiled.net IRC Services                                                   *
-* Copyright (C) 2002  Michael Rasmussen <the_real@nerdheaven.dk>            *
-*                     Morten Post <cure@nerdheaven.dk>                      *
+* Copyright (C) 2002-2003  Michael Rasmussen <the_real@nerdheaven.dk>       *
+*                          Morten Post <cure@nerdheaven.dk>                 *
 *                                                                           *
 * This program is free software; you can redistribute it and/or modify      *
 * it under the terms of the GNU General Public License as published by      *
@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: nickserv.h,v 1.8 2003/02/25 23:48:39 mr Exp $ */
+/* $Id: nickserv.h,v 1.12 2004/03/19 21:46:30 mr Exp $ */
 
 #ifndef INC_NICKSERV_H
 #define INC_NICKSERV_H
@@ -28,7 +28,7 @@
 #define JUPE_TIME 31337
 
 /* The time (in seconds) the should have passed since lastlogin for an account to expire */
-#define NICKSERV_EXPIRE_TIME    (30 * 24 * 60 * 60)
+#define NICKSERV_EXPIRE_TIME    (180 * 24 * 60 * 60)
 
 /* How often should we check for expired nicks (in seconds) */
 #define NICKSERV_EXPIRE_CHECK   (24 * 60 * 60)
@@ -54,9 +54,14 @@
 #define NICKSERV_SYNTAX_SET                 "Syntax: SET <option> <parameters>"
 #define NICKSERV_SYNTAX_DROP                "Syntax: DROP <password>"
 #define NICKSERV_SYNTAX_GHOST               "Syntax: GHOST <nickname> <password>"
-#define NICKSERV_SYNTAX_FORBID              "Syntax: FORBID <ADD|REM|LIST> [registered nickname] [reason|id]"
+#define NICKSERV_SYNTAX_FORBID              "Syntax: FORBID <ADD|REM|LIST> <registered nickname> [reason|id]"
 #define NICKSERV_SYNTAX_CHPASS              "Syntax: CHPASS <nickname> <password>"
 #define NICKSERV_SYNTAX_COMMENT             "Syntax: COMMENT <registered nickname> <ADD|REM|LIST> [comment|id]"
+#define NICKSERV_SYNTAX_GREP                "Syntax: GREP <type> <mask>"
+#define NICKSERV_SYNTAX_CHNICK              "Syntax: CHNICK <nickname> <new nickname>"
+#define NICKSERV_SYNTAX_NOEXPIRE            "Syntax: NOEXPIRE <nickname> [ON|OFF]"
+#define NICKSERV_SYNTAX_UNREG               "Syntax: UNREG <nick> FORCE"
+
 
 /* 
    GENERIC NICKSERV_ defines 
@@ -87,13 +92,17 @@ FUNC_COMMAND(nickserv_forbidlist);
 FUNC_COMMAND(nickserv_chpass);
 FUNC_COMMAND(nickserv_comment);
 FUNC_COMMAND(nickserv_helper);
+FUNC_COMMAND(nickserv_grep);
+FUNC_COMMAND(nickserv_chnick);
+FUNC_COMMAND(nickserv_noexpire);
+FUNC_COMMAND(nickserv_unreg);
 
 /*
    Function prototypes for nickserv helper functions.
  */
-nickserv_dbase_data  *nickserv_dbase_create(char *nick, char *email, char *passwd);
-nickserv_dbase_data  *nickserv_dbase_find_nick(char *nick);
-nickserv_dbase_data  *nickserv_dbase_add(const char *nick, const char *email, const char *password, const char *userhost, long lastlogin, char *info, unsigned long flags, long regdate, unsigned long console, int sql);
+nickserv_dbase_data  *nickserv_dbase_create(const char *nick, const char *email, const char *passwd);
+nickserv_dbase_data  *nickserv_dbase_find_nick(const char *nick);
+nickserv_dbase_data  *nickserv_dbase_add(const char *nick, const char *email, const char *password, const char *userhost, long lastlogin, const char *info, unsigned long flags, long regdate, unsigned long console, int sql);
 nickserv_dbase_data  *nickserv_dbase_get_juped(int nr);
 
 void                  nickserv_dbase_generate_password(char *buf, int length);
@@ -102,21 +111,20 @@ void                  nickserv_dbase_cleanup(void);
 void                  nickserv_dbase_checkold(void *ptr);
 void                  nickserv_dbase_op_on_auth(dbase_nicks *nick);
 
-int                   nickserv_dbase_validate_password(char *nick, char *passwd, dbase_nicks *info);
-int                   nickserv_dbase_valid_email(char *email);
+int                   nickserv_dbase_validate_password(const char *nick, const char *passwd, dbase_nicks *info);
+int                   nickserv_dbase_valid_email(const char *email);
 int                   nickserv_dbase_unreg(nickserv_dbase_data *ns);
-int                   nickserv_dbase_del(char *nick, int sql);
+int                   nickserv_dbase_del(const char *nick, int sql);
 int                   nickserv_dbase_internal_search(long low, long high, const char *nick);
 int                   nickserv_dbase_setbit(nickserv_dbase_data *nick, unsigned long bit, int sql);
 int                   nickserv_dbase_removebit(nickserv_dbase_data *nick, unsigned long bit, int sql);
 int                   nickserv_dbase_checkbit(nickserv_dbase_data *nick, unsigned long bit);
-int                   nickserv_dbase_set_is_ok(char *str);
-int                   nickserv_dbase_valid_nick(char *nick);
+int                   nickserv_dbase_valid_nick(const char *nick);
 int                   nickserv_dbase_init_jupes(sock_info *sock);
-int                   nickserv_dbase_email_exists(char *email);
+int                   nickserv_dbase_email_exists(const char *email);
 int                   nickserv_dbase_comment_add(nickserv_dbase_data *who, nickserv_dbase_data *nick, const char *comment, long date, int sql);
 int                   nickserv_dbase_comment_del(nickserv_dbase_data *who, unsigned long nr, int sql);
-int                   nickserv_new_nick_notice(sock_info *sock, char *numeric, char *nick);
+int                   nickserv_new_nick_notice(sock_info *sock, const char *numeric, const char *nick);
 int                   nickserv_dbase_notice(nickserv_dbase_data *who, const char *msg, ...);
 int                   nickserv_dbase_notice_check(dbase_nicks *from);
 

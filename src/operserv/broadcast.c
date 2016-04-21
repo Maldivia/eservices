@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: broadcast.c,v 1.3 2003/03/01 16:47:11 cure Exp $ */
+/* $Id: broadcast.c,v 1.4 2003/10/19 22:24:38 mr Exp $ */
 
 #include <ctype.h>
 #include <string.h>
@@ -31,9 +31,12 @@
 
 extern sock_info *irc;
 
-#define OPERSERV_BROADCAST_USERS  "[Global Announcement by %s]: %s"
-#define OPERSERV_BROADCAST_OPERS  "[Oper Announcement by %s]: %s"
-#define OPERSERV_BROADCAST_SENT   "Message sent to %d users."
+#define OPERSERV_BROADCAST_USERS          "[Global Announcement by %s]: %s"
+#define OPERSERV_BROADCAST_ANONYMOUS      "[Global Announcement]: %s"
+#define OPERSERV_BROADCAST_OPERS          "[Oper Announcement by %s]: %s"
+#define OPERSERV_BROADCAST_SENT           "Message sent to %d users."
+
+#define OPERSERV_BROADCAST_ANON_NOT_ADMIN "You need to have +a access to send an anonymous broadcast."
 
 /**************************************************************************************************
  * operserv_broadcast
@@ -77,15 +80,12 @@ FUNC_COMMAND(operserv_broadcast)
     {
       if (!(n = nicks_getinfo(NULL, NULL, i))) continue;
       
+      /* Simple test to check if this is a connection from services */
       if ((n->numeric[0] == conf->numeric[0]) && (n->numeric[1] == conf->numeric[1]))
         continue;
 
       /* checks if user is opered up or is authenticated in nickserv and has
-         oper access there. 
-         Hmm, this might be fucked up... dunno... it's 2am and I've been working
-         12 hours today... I'm exhausted... there's probably a better way but this
-         works :P
-       */
+         oper access there. */
       if (isbiton(n->modes, 'o'-'a')) 
       {
         no++;
@@ -93,15 +93,17 @@ FUNC_COMMAND(operserv_broadcast)
         com_message(irc, conf->ms->numeric, n->numeric, MODE_PRIVMSG, OPERSERV_BROADCAST_OPERS, from->nick, message); 
       }
       else if (n->nickserv)
+      {
         if (n->nickserv->flags & BITS_NICKSERV_OPER)
         {
           no++;
           /* announcements will be send from multiserv as a privat message */
           com_message(irc, conf->ms->numeric, n->numeric, MODE_PRIVMSG, OPERSERV_BROADCAST_OPERS, from->nick, message); 
         }
+      }
     } 
   } /* same deal just with all users including opers */
-  else if (!strcmp(type, "USERS")) 
+  else if (!strcmp(type, "USERS"))
   {
     for (i = 0; i < cnt; i++)
     {
@@ -113,6 +115,21 @@ FUNC_COMMAND(operserv_broadcast)
       no++;
       com_message(irc, conf->ms->numeric, n->numeric, MODE_PRIVMSG, OPERSERV_BROADCAST_USERS, from->nick, message); 
     } 
+  }
+  else if (!strcmp(type, "ANONYMOUS"))
+  {
+    if (!operserv_have_access(from->nickserv->flags, BITS_OPERSERV_SERVICES_SUB_ADMIN))
+     return com_message(sock, conf->os->numeric, from->numeric, format, OPERSERV_BROADCAST_ANON_NOT_ADMIN);
+    for (i = 0; i < cnt; i++)
+    {
+      if (!(n = nicks_getinfo(NULL, NULL, i))) continue;
+      
+      if ((n->numeric[0] == conf->numeric[0]) && (n->numeric[1] == conf->numeric[1]))
+        continue;
+
+      no++;
+      com_message(irc, conf->ms->numeric, n->numeric, MODE_PRIVMSG, OPERSERV_BROADCAST_ANONYMOUS, message);
+    }
   }
   else
     return com_message(sock, conf->os->numeric, from->numeric, format, command_info->syntax);

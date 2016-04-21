@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: list.c,v 1.3 2003/03/01 16:47:04 cure Exp $ */
+/* $Id: list.c,v 1.4 2004/01/09 22:25:23 cure Exp $ */
 
 #include <string.h>
 
@@ -51,6 +51,7 @@ extern chanserv_dbase_channel **chanserv_list;
 
 FUNC_COMMAND(chanserv_lister)
 {
+  int j = 0;
   char *arg = getnext(params);
 
   if (!operserv_have_access(from->nickserv->flags, command_info->flags)) return ERROR_NO_ACCESS;
@@ -73,9 +74,11 @@ FUNC_COMMAND(chanserv_lister)
       if (chanserv_list[i]->flags & BITS_CHANSERV_EXPIRED)
       {
         com_message(sock, conf->cs->numeric, from->numeric, format, "  %s %s", gtime((time_t*)&chanserv_list[i]->lastlogin), chanserv_list[i]->name);
+        j++;
       }    
     }
-  
+
+    com_message(sock, conf->cs->numeric, from->numeric, format, "%d expired channels listed.", j);    
     log_command(LOG_CHANSERV, from, "LIST", "EXPIRED");
   } /* listing all disabled channels */
   else if (!strcmp(arg, "DISABLED"))
@@ -90,9 +93,11 @@ FUNC_COMMAND(chanserv_lister)
       {
         if (chanserv_list[i]->flags & BITS_CHANSERV_EXPIRED) continue;
         com_message(sock, conf->cs->numeric, from->numeric, format, "  %s", chanserv_list[i]->name);       
+        j++;
       }
     }
     
+    com_message(sock, conf->cs->numeric, from->numeric, format, "%d disabled channels listed.", j);    
     log_command(LOG_CHANSERV, from, "LIST", "DISABLED");
   } /* listing all channels with the noexpire setttings on */
   else if (!strcmp(arg, "NOEXPIRE"))
@@ -106,9 +111,11 @@ FUNC_COMMAND(chanserv_lister)
       if (chanserv_list[i]->flags & BITS_CHANSERV_NOEXPIRE)
       {
         com_message(sock, conf->cs->numeric, from->numeric, format, "  %s", chanserv_list[i]->name);       
+        j++;
       }
     }
-    
+
+    com_message(sock, conf->cs->numeric, from->numeric, format, "%d noexpire channels listed.", j);    
     log_command(LOG_CHANSERV, from, "LIST", "NOEXPIRE");    
   }
   else

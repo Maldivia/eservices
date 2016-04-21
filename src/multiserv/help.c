@@ -75,7 +75,7 @@ FUNC_COMMAND(multiserv_help)
     strcpy(buf, "");
     
     /* write header */
-    com_message(sock, conf->ns->numeric, from->numeric, format, MULTISERV_HELP_HEADER, conf->ms->nick);
+    com_message(sock, conf->ms->numeric, from->numeric, format, MULTISERV_HELP_HEADER, conf->ms->nick);
     
     /* run through the entire list */
     while (parser_multiserv_commands[i].command)
@@ -85,7 +85,7 @@ FUNC_COMMAND(multiserv_help)
       {
         /* is this a non-oper-command and is the user authed or is it a auted-not-required command ? */
         if ((!acc) && ((from->nickserv) || (!lvl)))
-          com_message(sock, conf->ns->numeric, from->numeric, format, "           %s", buf);
+          com_message(sock, conf->ms->numeric, from->numeric, format, "           %s", buf);
         /* is it a oper-command, and do the user have access to it */
         else if (operserv_have_access(flags, acc))
         {
@@ -95,7 +95,7 @@ FUNC_COMMAND(multiserv_help)
           
           /* Is the command a helper-command, in that case, write is as such
              else write is as an OPER +[string] command */
-          com_message(sock, conf->ns->numeric, from->numeric, format, "   OPER +%s:%s", flagsbuf, buf);
+          com_message(sock, conf->ms->numeric, from->numeric, format, "   OPER +%s:%s", flagsbuf, buf);
         }
         /* reset the buffer */
         strcpy(buf, "");
@@ -112,15 +112,15 @@ FUNC_COMMAND(multiserv_help)
     }
     
     /* write the footer */
-    com_message(sock, conf->ns->numeric, from->numeric, format, MULTISERV_HELP_FOOTER, conf->ms->nick);
+    com_message(sock, conf->ms->numeric, from->numeric, format, MULTISERV_HELP_FOOTER, conf->ms->nick);
   }
   else
   {
     /* see if the command is in the help-database and write the help text if found */
     if(!(help_db = help_search(help_multiserv, help)))
-      com_message(sock, conf->ns->numeric, from->numeric, format, "No help available on %s", help);
+      com_message(sock, conf->ms->numeric, from->numeric, format, "No help available on %s", help);
     else
-      help_show(sock, from->numeric, conf->ns->numeric, format, help_db);
+      help_show(sock, from->numeric, conf->ms->numeric, format, help_db);
   }
 
   return 0;

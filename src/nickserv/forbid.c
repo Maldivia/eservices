@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: forbid.c,v 1.3 2003/03/01 16:47:08 cure Exp $ */
+/* $Id: forbid.c,v 1.4 2003/10/19 22:24:17 mr Exp $ */
 
 #include <string.h>
 
@@ -33,7 +33,7 @@ extern sock_info *irc;
 extern nickserv_dbase_data *jupe_list[26*26];
 
 #define NICKSERV_FORBID_UNFORBID_SUCCESSFUL "%s is no longer a forbidden nickname."
-#define NICKSERV_FORBID_SUCCESSFUL          "%s is now a forbidden nickanem."
+#define NICKSERV_FORBID_SUCCESSFUL          "%s is now a forbidden nickname."
 #define NICKSERV_FORBID_NOT_FORBIDDEN       "%s is not a forbidden nickname."
 #define NICKSERV_FORBID_ALREADY_FORBIDDEN   "Nickname is already forbidden."
 #define NICKSERV_FORBID_FULL                "ALARM ALARM ALARM! MAX FORBIDDEN NICKNAMES REACHES PLEASE CONTACT SERVICES ADMIN!!!"
@@ -62,7 +62,14 @@ extern nickserv_dbase_data *jupe_list[26*26];
 FUNC_COMMAND(nickserv_forbid)
 {
   char *type = getnext(params);
+  
+  /* is user authed */
+  if (!from->nickserv) return ERROR_NO_ACCESS;
 
+  /* Does the user have oper-access to this command */
+  if (!operserv_have_access(from->nickserv->flags, command_info->flags)) return ERROR_NO_ACCESS;
+
+  /* enough parameters */
   if (!type)
     return com_message(sock, conf->ns->numeric, from->numeric, format, command_info->syntax);
 
@@ -75,14 +82,7 @@ FUNC_COMMAND(nickserv_forbid)
     nickserv_dbase_data *data;
     int i, found = -1;
 
-    /* is user authed */
-    if (!from->nickserv) return ERROR_NO_ACCESS;
-
-    /* Does the user have oper-access to this command */
-    if (!operserv_have_access(from->nickserv->flags, command_info->flags)) return ERROR_NO_ACCESS;
-
-    /* Ok, it looks like the users actually do have access to this command,
-    proceed with checking for correct parameters */
+    /* proceed with checking for correct parameters */
     nick = getnext(params);
     reason = getrest(params);
 
@@ -141,14 +141,8 @@ FUNC_COMMAND(nickserv_forbid)
     char *nick, num[4] = "JAA";
     nickserv_dbase_data *data;
     int i;
-    /* is user auth'ed in NS ? */
-    if (!from->nickserv) return ERROR_NO_ACCESS;
 
-    /* Does the user have access to this command */
-    if (!operserv_have_access(from->nickserv->flags, command_info->flags)) return ERROR_NO_ACCESS;
-
-    /* Ok, it looks like the users actually do have access to this command,
-     proceed with checking for correct parameters */
+    /* proceed with checking for correct parameters */
     nick = getnext(params);
 
     /* Ok, did the oper remember the parameter ? */
@@ -191,10 +185,7 @@ FUNC_COMMAND(nickserv_forbid)
   else if (!strcmp(type, "LIST"))
   {
     int i;
-    /* do the user have access to this command */
-    if (!from->nickserv) return ERROR_NO_ACCESS;
-    if (!operserv_have_access(from->nickserv->flags, command_info->flags)) return ERROR_NO_ACCESS;
-  
+ 
     /* write header */
     com_message(sock, conf->ns->numeric, from->numeric, format, NICKSERV_FORBID_LIST_HEADER);
     /* loop through the entire jupe-list, writing jupes as they are found */

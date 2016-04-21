@@ -1,7 +1,7 @@
 /****************************************************************************
 * Exiled.net IRC Services                                                   *
-* Copyright (C) 2002  Michael Rasmussen <the_real@nerdheaven.dk>            *
-*                     Morten Post <cure@nerdheaven.dk>                      *
+* Copyright (C) 2002-2003  Michael Rasmussen <the_real@nerdheaven.dk>       *
+*                          Morten Post <cure@nerdheaven.dk>                 *
 *                                                                           *
 * This program is free software; you can redistribute it and/or modify      *
 * it under the terms of the GNU General Public License as published by      *
@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: p10.c,v 1.8 2003/02/25 23:49:47 mr Exp $ */
+/* $Id: p10.c,v 1.12 2004/03/19 21:50:41 mr Exp $ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -37,12 +37,15 @@
 #include "nickserv.h"
 #include "db_server.h"
 #include "dcc.h"
+#include "timer.h"
 
 extern char *build_date;
 extern sock_info *irc;
 extern int com_burst;
+extern int ping_send;
 
 int connected = 0;
+time_t connected_since = 0; /* service has been connected since this timestamp */
 
 /*
  **************************************************************************************************
@@ -54,7 +57,7 @@ int connected = 0;
  *   std. for parser functions
  **************************************************************************************************
  */
-int p10_server(sock_info *sock, char *from, char **params)
+int p10_server(sock_info *sock, const char *from, char **params)
 {
   char *name, *numeric, *desc;
   unsigned long linktime;
@@ -93,7 +96,7 @@ int p10_server(sock_info *sock, char *from, char **params)
  *   std. for parser functions
  **************************************************************************************************
  */
-int p10_pass(sock_info *sock, char *from, char **params)
+int p10_pass(sock_info *sock, const char *from, char **params)
 {
   /* TODO: Ought to check the password... but for now we don't */
   return 0;
@@ -109,7 +112,7 @@ int p10_pass(sock_info *sock, char *from, char **params)
  *   std. for parser functions
  **************************************************************************************************
  */
-int p10_error(sock_info *sock, char *from, char **params)
+int p10_error(sock_info *sock, const char *from, char **params)
 {
   /* Woops, error !! TODO - Something must be done!! SQUIT ?? */
   dcc_console_text('b', "[ERROR] %s", *params);
@@ -127,7 +130,7 @@ int p10_error(sock_info *sock, char *from, char **params)
  *   std. for parser functions
  **************************************************************************************************
  */
-int p10_end_of_burst(sock_info *sock, char *from, char **params)
+int p10_end_of_burst(sock_info *sock, const char *from, char **params)
 {
   dbase_server *server;
   if (!connected)
@@ -141,10 +144,12 @@ int p10_end_of_burst(sock_info *sock, char *from, char **params)
     com_send(irc, "%s EB\n", conf->numeric); /* END_OF_BURST */
     com_send(irc, "%s EA\n", conf->numeric);
     connected = 1;
+    connected_since = time(0);
   }
   server = server_search(from);
   if (server)
     dcc_console_text('b', "[%s] end of burst", server->name);
+
   com_burst = 0;
   return 0;
 }
@@ -159,8 +164,9 @@ int p10_end_of_burst(sock_info *sock, char *from, char **params)
  *   std. for parser functions
  **************************************************************************************************
  */
-int p10_end_of_burst_acknowledge(sock_info *sock, char *from, char **params)
+int p10_end_of_burst_acknowledge(sock_info *sock, const char *from, char **params)
 {
+  chanserv_dbase_enforce_all();
   return 0;
 }
 
@@ -176,7 +182,7 @@ int p10_end_of_burst_acknowledge(sock_info *sock, char *from, char **params)
  *   std. for parser functions
  **************************************************************************************************
  */
-int p10_ping(sock_info *sock, char *from, char **params)
+int p10_ping(sock_info *sock, const char *from, char **params)
 {
   char *user = getnext(params);
   char *rest = getrest(params);
@@ -195,6 +201,23 @@ int p10_ping(sock_info *sock, char *from, char **params)
 
 /*
  **************************************************************************************************
+ * p10_pong
+ **************************************************************************************************
+ *   Parser for the P10 command: Z (pong)
+ *    [NUM] G <sender> :[server]
+ *
+ **************************************************************************************************
+ * Params:
+ *   std. for parser functions
+ **************************************************************************************************
+ */
+int p10_pong(sock_info *sock, const char *from, char **params)
+{
+  ping_send = 0;
+  return 0;
+}
+/*
+ **************************************************************************************************
  * p10_squit
  **************************************************************************************************
  *   Parser for the P10 command: SQUIT
@@ -205,7 +228,7 @@ int p10_ping(sock_info *sock, char *from, char **params)
  *   std. for parser functions
  **************************************************************************************************
  */
-int p10_squit(sock_info *sock, char *from, char **params)
+int p10_squit(sock_info *sock, const char *from, char **params)
 {
   dbase_server *srv; 
   char *server = getnext(params);
@@ -234,7 +257,7 @@ int p10_squit(sock_info *sock, char *from, char **params)
  *   std. for parser functions
  **************************************************************************************************
  */
-int p10_nick(sock_info *sock, char *from, char **params)
+int p10_nick(sock_info *sock, const char *from, char **params)
 {
   dbase_nicks n;
   char *nick = getnext(params);
@@ -275,7 +298,10 @@ int p10_nick(sock_info *sock, char *from, char **params)
     {
       char *p, num[5];
       dbase_server *server;
-      com_message(sock, conf->ns->numeric, n.numeric, "O", NICKSERV_NEW_NICK_NOTICE, nick); /* Welcomes the users */
+
+#ifndef NO_NICKSERV_WELCOME
+      com_message(sock, conf->ns->numeric, n.numeric, MODE_NOTICE, NICKSERV_NEW_NICK_NOTICE, nick); /* Welcomes the users */
+#endif
       nickserv_new_nick_notice(sock, n.numeric, n.nick); /* Checks if the nick is already registered or not (nickserv.c) */
 
       strncpy(num, n.numeric, 2);
@@ -299,7 +325,7 @@ int p10_nick(sock_info *sock, char *from, char **params)
  *   std. for parser functions
  **************************************************************************************************
  */
-int p10_burst(sock_info *sock, char *from, char **params)
+int p10_burst(sock_info *sock, const char *from, char **params)
 {
   long chn;
   char *num, mode[4];
@@ -389,7 +415,7 @@ int p10_burst(sock_info *sock, char *from, char **params)
  *   std. for parser functions
  **************************************************************************************************
  */
-int p10_join(sock_info *sock, char *from, char **params)
+int p10_join(sock_info *sock, const char *from, char **params)
 {
   dbase_nicks *ns = nicks_getinfo(from, NULL, -1);
   char *p, *c = getnext(params);
@@ -435,7 +461,7 @@ int p10_join(sock_info *sock, char *from, char **params)
  *   std. for parser functions
  **************************************************************************************************
  */
-int p10_create(sock_info *sock, char *from, char **params)
+int p10_create(sock_info *sock, const char *from, char **params)
 {
   dbase_nicks *ns = nicks_getinfo(from, NULL, -1);
   char *p;
@@ -468,7 +494,7 @@ int p10_create(sock_info *sock, char *from, char **params)
  *   std. for parser functions
  **************************************************************************************************
  */
-int p10_part(sock_info *sock, char *from, char **params)
+int p10_part(sock_info *sock, const char *from, char **params)
 {
   dbase_nicks *ns = nicks_getinfo(from, NULL, -1);
   char *p;
@@ -498,7 +524,7 @@ int p10_part(sock_info *sock, char *from, char **params)
  *   std. for parser functions
  **************************************************************************************************
  */
-int p10_quit(sock_info *sock, char *from, char **params)
+int p10_quit(sock_info *sock, const char *from, char **params)
 {
   char *reason = getrest(params);
   dbase_nicks *ns = nicks_getinfo(from, NULL, -1);
@@ -518,7 +544,7 @@ int p10_quit(sock_info *sock, char *from, char **params)
  *   std. for parser functions
  **************************************************************************************************
  */
-int p10_notice(sock_info *sock, char *from, char **params)
+int p10_notice(sock_info *sock, const char *from, char **params)
 {
   char *to = getnext(params);
   return parser_commands(sock, to, params, from, MODE_NOTICE);
@@ -534,7 +560,7 @@ int p10_notice(sock_info *sock, char *from, char **params)
  *   std. for parser functions
  **************************************************************************************************
  */
-int p10_invite(sock_info *sock, char *from, char **params)
+int p10_invite(sock_info *sock, const char *from, char **params)
 {
   char *nick = getrest(params);
   char *chan = getrest(params);
@@ -561,7 +587,7 @@ int p10_invite(sock_info *sock, char *from, char **params)
  *   std. for parser functions
  **************************************************************************************************
  */
-int p10_mode(sock_info *sock, char *from, char **params)
+int p10_mode(sock_info *sock, const char *from, char **params)
 {
   dbase_nicks *ns = nicks_getinfo(from, NULL, -1);
   dbase_server *server = server_search(from);
@@ -642,15 +668,28 @@ int p10_mode(sock_info *sock, char *from, char **params)
           mode[0] = minus;
           mode[1] = *modestr;
           mode[2] = '\0';
-  
+          
           tmp = getnext(params);
+          
+          if (strcmp(tmp, conf->cs->numeric) == 0)
+          {
+            if ((minus == '-') && (*modestr == 'o'))
+              com_send(irc, "%s M %s +o %s\n", conf->numeric, who, conf->cs->numeric);
+            break;
+          }
+          
           channels_usermode(-1, who, mode, tmp);
           
           strcat(dcc_param, " ");
           if ((tmp2 = nicks_getnick(tmp)))
+          {
             strcat(dcc_param, tmp2);
+            if ((minus == '+') && (*modestr == 'o'))
+              chanserv_dbase_check_ops(who, tmp2);
+          }
           else
             strcat(dcc_param, tmp);
+
           break;
       default:
          /* Unknown mode !! */
@@ -707,7 +746,7 @@ int p10_mode(sock_info *sock, char *from, char **params)
  *   std. for parser functions
  **************************************************************************************************
  */
-int p10_away(sock_info *sock, char *from, char **params)
+int p10_away(sock_info *sock, const char *from, char **params)
 {  
   nicks_setaway(from, getrest(params));
   return 0;
@@ -724,15 +763,17 @@ int p10_away(sock_info *sock, char *from, char **params)
  *   std. for parser functions
  **************************************************************************************************
  */
-int p10_topic(sock_info *sock, char *from, char **params)
+int p10_topic(sock_info *sock, const char *from, char **params)
 {  
   dbase_nicks *ns = nicks_getinfo(from, NULL, -1);
   char *chan = getnext(params);
   char *topic = getrest(params);
-  channels_settopic(-1, chan, topic);
 
+  channels_settopic(-1, chan, topic);
   if (ns)
     dcc_console_text('t', "[%s!%s@%s] sets topic on %s: %s", ns->nick, ns->username, ns->host, chan, topic);
+    
+  chanserv_dbase_check_topic(chan);
   
   return 0;
 }
@@ -748,7 +789,7 @@ int p10_topic(sock_info *sock, char *from, char **params)
  *   std. for parser functions
  **************************************************************************************************
  */
-int p10_kick(sock_info *sock, char *from, char **params)
+int p10_kick(sock_info *sock, const char *from, char **params)
 {
   char *chan = getnext(params);
   char *num = getnext(params);
@@ -773,7 +814,7 @@ int p10_kick(sock_info *sock, char *from, char **params)
  *   std. for parser functions
  **************************************************************************************************
  */
-int p10_privmsg(sock_info *sock, char *from, char **params)
+int p10_privmsg(sock_info *sock, const char *from, char **params)
 {
   char *to = getnext(params);
   return parser_commands(sock, to, params, from, MODE_PRIVMSG);
@@ -789,7 +830,7 @@ int p10_privmsg(sock_info *sock, char *from, char **params)
  *   std. for parser functions
  **************************************************************************************************
  */
-int p10_kill(sock_info *sock, char *from, char **params)
+int p10_kill(sock_info *sock, const char *from, char **params)
 {
   nicks_remove(getnext(params));
   return 0;
@@ -806,7 +847,7 @@ int p10_kill(sock_info *sock, char *from, char **params)
  *   std. for parser functions
  **************************************************************************************************
  */
-int p10_wallops(sock_info *sock, char *from, char **params)
+int p10_wallops(sock_info *sock, const char *from, char **params)
 {
   char *msg = getrest(params);
   char frombuf[BUFFER_SIZE], buf[2*BUFFER_SIZE];
@@ -852,7 +893,7 @@ int p10_wallops(sock_info *sock, char *from, char **params)
  *   std. for parser functions
  **************************************************************************************************
  */
-int p10_version (sock_info *sock, char *from, char **params)
+int p10_version (sock_info *sock, const char *from, char **params)
 {
   dbase_nicks *nick;
   if (!(nick = nicks_getinfo(from, NULL, -1))) return 0;
@@ -861,13 +902,22 @@ int p10_version (sock_info *sock, char *from, char **params)
 }
 
 
-
-
-
-
-
-
-
-
-
+/*
+ **************************************************************************************************
+ * p10_whois
+ **************************************************************************************************
+ *   Parser for the P10 command: V (version)
+ *   [NUM Sender] V :[NUM Server]
+ **************************************************************************************************
+ * Params:
+ *   std. for parser functions
+ **************************************************************************************************
+ */
+int p10_whois (sock_info *sock, const char *from, char **params)
+{
+  dbase_nicks *nick;
+  if (!(nick = nicks_getinfo(from, NULL, -1))) return 0;
+  com_send(irc, ":%s 351 %s u2.services %s :%s IRC Services (%s)\n", conf->host, nick->nick, conf->host, NETWORK_NAME, build_date);
+  return 0;  
+}
 

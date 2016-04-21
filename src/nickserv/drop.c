@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: drop.c,v 1.2 2003/02/25 22:41:17 cure Exp $ */
+/* $Id: drop.c,v 1.4 2004/01/17 14:47:20 mr Exp $ */
 
 #include "nickserv.h"
 #include "misc_func.h"
@@ -31,13 +31,13 @@
 #define NICKSERV_DROP_NO_SUCH_USER          "%s is not a registered nickname."
 
 /**************************************************************************************************
- * nickserv_drop
+ * nickserv_unreg
  **************************************************************************************************
- *   DROP <password>
- *      +R
- *      Drops the account the user is currently identified as. 
- *      <password> MUST match the accounts password.
- *       <password> = getnext-string
+ *   UNREG <rnick> FORCE
+ *      +R +O +N
+ *      Forcefolly drops an account. 
+ *      <rnick> = getnext-string
+ *      FORCE   = getnext-string
   **************************************************************************************************
  * Params:
  *   [IN] sock_info *sock    : The socket from which the data was recieved
@@ -59,7 +59,7 @@ FUNC_COMMAND(nickserv_drop)
   if (!password) return com_message(sock, conf->ns->numeric, from->numeric, format, command_info->syntax);
 
   /* is the password correct, if not return error-message */
-  if (nickserv_dbase_validate_password(from->nickserv->nick, password, from))
+  if (password_compare(from->nickserv, password))
     return com_message(sock, conf->ns->numeric, from->numeric, format, NICKSERV_DROP_WRONG);
   
   /* Inform the user that the nick is being dropped */

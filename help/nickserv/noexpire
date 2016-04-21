@@ -1,0 +1,12 @@
+Syntax: NOEXPIRE <nickname> [ON|OFF]
+    
+This command is used to set/toggle the noexpire flags for
+nicserv accounts. This can be used to prevent the automatic
+removal of expired nick. If no second parameter is given or the
+parameter is not a valid on/off indicator, the flag is toggled.
+Note that accounts which have OPER ON is already marked as 
+noexpire by the oper flag and noexpire does not alter this 
+in any way.
+     
+SEE ALSO:
+  SET

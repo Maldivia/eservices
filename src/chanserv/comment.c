@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: comment.c,v 1.3 2003/03/01 16:47:04 cure Exp $ */
+/* $Id: comment.c,v 1.4 2003/10/19 22:23:33 mr Exp $ */
 
 #include <string.h>
 
@@ -78,7 +78,7 @@ FUNC_COMMAND(chanserv_comment)
   if (cmd)
     cmd = uppercase(cmd);
 
-  if ((!strcmp(cmd, "LIST")))
+  if ((!cmd) || (!strcmp(cmd, "LIST")))
   {
     int i;
     struct tm *td;

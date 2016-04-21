@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: enable.c,v 1.2 2003/02/25 22:41:36 cure Exp $ */
+/* $Id: enable.c,v 1.3 2004/01/09 01:03:24 cure Exp $ */
 
 #include <stdio.h>
 
@@ -32,7 +32,7 @@
 #define CHANSERV_ENABLE_NOT_DIS    "%s is not disabled."
 #define CHANSERV_ENABLE_OK         "%s is no longer disabled.\n"\
                                    "In most cases it would be appropriate to add a comment on the channel,\n"\
-                                   "saying why the channel was undisabled."
+                                   "saying why the channel was enabled."
 
 /**************************************************************************************************
  * chanserv_enable

@@ -1,7 +1,7 @@
 /****************************************************************************
 * Exiled.net IRC Services                                                   *
-* Copyright (C) 2002  Michael Rasmussen <the_real@nerdheaven.dk>            *
-*                     Morten Post <cure@nerdheaven.dk>                      *
+* Copyright (C) 2002-2003 Michael Rasmussen <the_real@nerdheaven.dk>        *
+*                         Morten Post <cure@nerdheaven.dk>                  *
 *                                                                           *
 * This program is free software; you can redistribute it and/or modify      *
 * it under the terms of the GNU General Public License as published by      *
@@ -17,11 +17,12 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: help.c,v 1.3 2003/01/17 18:32:40 mr Exp $ */
+/* $Id: help.c,v 1.6 2003/10/19 22:22:59 mr Exp $ */
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#include <sys/stat.h>
 #include <dirent.h>
 #include <string.h>
 
@@ -43,7 +44,7 @@ int help_load(void)
   return 0;
 }
 
-help_db *help_load_db(char *dir)
+help_db *help_load_db(const char *dir)
 {
   int i = 0;
   char buffer[BUFFER_SIZE];
@@ -52,9 +53,10 @@ help_db *help_load_db(char *dir)
   help_db *new    = NULL;
   help_db *db     = NULL;
   struct dirent *dp;
+  struct stat st;
   DIR *h_dir;
   FILE *fp;
-
+  
   snprintf(help_dir, BUFFER_SIZE, "%s/%s/", getenv("PWD"), dir);
 
   if ((h_dir = opendir(help_dir)) == NULL)
@@ -62,27 +64,32 @@ help_db *help_load_db(char *dir)
     debug_out("- Could not read help files (%s)\n", help_dir);
     return NULL;
   }
-
+  
   while ((dp = readdir(h_dir)) != NULL)
   {
-    if (dp->d_type & DT_DIR) continue;
-
-    filename[0] = '\0';
     strcpy(filename, help_dir);
     strcat(filename, dp->d_name);
+    
+    if (stat(filename, &st) < 0)
+    {
+      debug_out("- Could not stat file: %s\n",  filename);
+      return NULL;
+    }
+  
+    if (S_ISDIR(st.st_mode)) continue;
 
     if ((fp = fopen(filename, "r")))
     {
-      new = (help_db *) malloc(sizeof(help_db));
+      new = (help_db *) xmalloc(sizeof(help_db));
       new->next = db;
       db = new;
 
-      new->cmd_name  = (char *) malloc(strlen(dp->d_name)+1);
+      new->cmd_name  = (char *) xmalloc(strlen(dp->d_name)+1);
       strcpy(new->cmd_name, dp->d_name);
 
       for (i = 0; fgets(buffer, BUFFER_SIZE, fp); i++)
       {
-        new->help_desc[i] = (char *) malloc(strlen(buffer)+1);
+        new->help_desc[i] = (char *) xmalloc(strlen(buffer)+1);
         strcpy(new->help_desc[i], buffer);
       }
       new->help_desc[i] = NULL;
@@ -94,7 +101,7 @@ help_db *help_load_db(char *dir)
 }
 
 
-help_db *help_search(help_db *db, char *entry)
+help_db *help_search(help_db *db, const char *entry)
 {
   help_db *curr = db;
 
@@ -107,7 +114,7 @@ help_db *help_search(help_db *db, char *entry)
   return NULL;
 }
 
-int help_show(sock_info *sock, char *from, char *to, char *format, help_db *db)
+int help_show(sock_info *sock, const char *from, const char *to, const char *format, help_db *db)
 {
   int i = 0;
 

@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: nickserv.c,v 1.19 2003/03/01 16:52:08 mr Exp $ */
+/* $Id: nickserv.c,v 1.23 2004/03/19 21:46:35 mr Exp $ */
 
 #include "setup.h"
 
@@ -69,7 +69,7 @@ nickserv_dbase_data *jupe_list[26*26];
  * Return:
  *  [OUT] int return         : return 0 if success, anything else will cause the services to stop
  **************************************************************************************************/
-int nickserv_new_nick_notice(sock_info *sock, char *numeric, char *nick)
+int nickserv_new_nick_notice(sock_info *sock, const char *numeric, const char *nick)
 {
   nickserv_dbase_data *who;
   dbase_nicks *info = nicks_getinfo(numeric, NULL, -1);
@@ -87,10 +87,12 @@ int nickserv_new_nick_notice(sock_info *sock, char *numeric, char *nick)
     else
       com_message(sock, conf->ns->numeric, numeric, MODE_NOTICE, NICKSERV_NEW_NICK_REGNICK, nick, conf->ns->nick);
   }
+#ifndef NO_NICKSERV_REGISTER_NICK_ANNOUNCE  
   else if (!info->nickserv)
     /* write message about the nick not being regged */
     com_message(sock, conf->ns->numeric, numeric, MODE_NOTICE, NICKSERV_NEW_NICK_NOTREGNICK, nick, conf->ns->nick);
-  
+#endif
+
   return 0;
 }
 
@@ -109,7 +111,7 @@ void nickserv_dbase_update(dbase_nicks *info)
   if (!info->nickserv) return;
   
   /* update user@host */
-  info->nickserv->userhost = (char *)realloc(info->nickserv->userhost, strlen(info->username)+strlen(info->host)+2*SIZEOF_CHAR);
+  info->nickserv->userhost = (char *)xrealloc(info->nickserv->userhost, strlen(info->username)+strlen(info->host)+2*SIZEOF_CHAR);
   strcpy(info->nickserv->userhost, info->username);
   strcat(info->nickserv->userhost, "@");
   strcat(info->nickserv->userhost, info->host);
@@ -133,18 +135,17 @@ void nickserv_dbase_update(dbase_nicks *info)
  * Return;
  *  [OUT] nickserv_dbase_data* : the created entry
  **************************************************************************************************/
-nickserv_dbase_data *nickserv_dbase_create(char *nick, char *email, char *passwd)
+nickserv_dbase_data *nickserv_dbase_create(const char *nick, const char *email, const char *passwd)
 {
-  const char *pwd;
-  char sand[3];
-  /* randomize the seed */
-  sand[0] = 97 + rand()%25;
-  sand[1] = 97 + rand()%25;
-  sand[2] = '\0';
-  /* crypt the password */
-  pwd = ircd_crypt(passwd, sand);
-  /* create the new regged nick, and return the created entry */
-  return nickserv_dbase_add(nick, email, pwd, "", 0, "", BITS_NICKSERV_SECRET, time(0), 4, COMMIT_TO_MYSQL);
+  nickserv_dbase_data *n;
+  
+  /* create the new regged nick */
+  n = nickserv_dbase_add(nick, email, "", "", 0, "", BITS_NICKSERV_SECRET, time(0), 4, COMMIT_TO_MYSQL);
+
+  /* encrypt the users password, and safe it to mysql */
+  nick_password_crypt(n, passwd);
+
+  return n;
 }
 
 /**************************************************************************************************
@@ -181,13 +182,13 @@ void nickserv_dbase_generate_password(char *buf, int length)
  * Return;
  *  [OUT] int                : bool values, if the password is false
  **************************************************************************************************/
-int nickserv_dbase_validate_password(char *nick, char *passwd, dbase_nicks *info)
+int nickserv_dbase_validate_password(const char *nick, const char *passwd, dbase_nicks *info)
 {
   nickserv_dbase_data *ns;
   /* is nick regged */
   if (!(ns = nickserv_dbase_find_nick(nick))) return 1;
   /* is it the correct password */
-  if (strcmp(ns->password, ircd_crypt(passwd, ns->password)))    
+  if (password_compare(ns, passwd))
     return 1;
   /* update the dbase_nicks struct */
   info->nickserv = ns;
@@ -206,7 +207,7 @@ int nickserv_dbase_validate_password(char *nick, char *passwd, dbase_nicks *info
  * Return;
  *  [OUT] nickserv_dbase_data* : NULL of not found, else the struct for nick
  **************************************************************************************************/
-nickserv_dbase_data *nickserv_dbase_find_nick(char *nick)
+nickserv_dbase_data *nickserv_dbase_find_nick(const char *nick)
 {
   int res;  
   if (!nick) return NULL;
@@ -231,7 +232,7 @@ nickserv_dbase_data *nickserv_dbase_find_nick(char *nick)
  * Return;
  *  [OUT] int                : bool value, if the email is valid or not
  **************************************************************************************************/
-int nickserv_dbase_valid_email(char *email)
+int nickserv_dbase_valid_email(const char *email)
 {
   int normal = 0;
   int at_sign = 0;
@@ -291,11 +292,11 @@ int nickserv_dbase_valid_email(char *email)
  *   [IN] unsigned long flags   : the flags of the entry to create
  *   [IN] long regdate          : the date of registration of the entry to create
  *   [IN] unsigned long console : the DCC-console setting of the entry to create
- *   [IN] int sql               : weather it should be saved to mysql or not
+ *   [IN] int sql               : whether it should be saved to mysql or not
  * Return;
  *  [OUT] nickserv_dbase_data   : the created entry
  **************************************************************************************************/
- nickserv_dbase_data *nickserv_dbase_add(const char *nick, const char *email, const char *password, const char *userhost, long lastlogin, char *info, unsigned long flags, long regdate, unsigned long console, int sql)
+ nickserv_dbase_data *nickserv_dbase_add(const char *nick, const char *email, const char *password, const char *userhost, long lastlogin, const char *info, unsigned long flags, long regdate, unsigned long console, int sql)
 {
   int nr;
   nickserv_dbase_data *entry;
@@ -307,22 +308,23 @@ int nickserv_dbase_valid_email(char *email)
 
   nr = (1+nr) * -1;
   /* allocate memory for the entry */
-  entry = (nickserv_dbase_data *)malloc(sizeof(nickserv_dbase_data));
+  entry = (nickserv_dbase_data *)xmalloc(sizeof(nickserv_dbase_data));
 
   /* allocate memory for the data of the entry, and copy the data */
-  entry->nick = (char *)malloc(strlen(nick)+SIZEOF_CHAR);
+  entry->nick = (char *)xmalloc(strlen(nick)+SIZEOF_CHAR);
   strcpy(entry->nick, nick);
 
-  entry->email = (char *)malloc(strlen(email)+SIZEOF_CHAR);
+  entry->email = (char *)xmalloc(strlen(email)+SIZEOF_CHAR);
   strcpy(entry->email, email);
 
-  entry->password = (char *)malloc(strlen(password)+SIZEOF_CHAR);
+  entry->password = (char *)xmalloc(strlen(password)+SIZEOF_CHAR);
+
   strcpy(entry->password, password);
 
-  entry->userhost = (char *)malloc(strlen(userhost)+SIZEOF_CHAR);
+  entry->userhost = (char *)xmalloc(strlen(userhost)+SIZEOF_CHAR);
   strcpy(entry->userhost, userhost);
 
-  entry->info = (char *)malloc(strlen(info)+SIZEOF_CHAR);
+  entry->info = (char *)xmalloc(strlen(info)+SIZEOF_CHAR);
   strcpy(entry->info, info);
 
   entry->comments = NULL;
@@ -342,7 +344,7 @@ int nickserv_dbase_valid_email(char *email)
   entry->access = NULL;
 
   /* rearrange the array, and insert the new entry */
-  nickserv_list = (nickserv_dbase_data**)realloc(nickserv_list, (nickserv_list_count+1) * SIZEOF_VOIDP);
+  nickserv_list = (nickserv_dbase_data**)xrealloc(nickserv_list, (nickserv_list_count+1) * SIZEOF_VOIDP);
   if (nr < (nickserv_list_count++)) memmove(&nickserv_list[nr+1], &nickserv_list[nr], (nickserv_list_count - nr - 1) * SIZEOF_VOIDP);
   nickserv_list[nr] = entry;
 
@@ -399,7 +401,7 @@ int nickserv_dbase_unreg(nickserv_dbase_data *ns)
  * Return;
  *  [OUT] int               : bool value if failure or not
  **************************************************************************************************/
-int nickserv_dbase_del(char *nick, int sql)
+int nickserv_dbase_del(const char *nick, int sql)
 {
   char n[MAX_NICK_LEN];
   int index, i, j;  
@@ -449,7 +451,7 @@ int nickserv_dbase_del(char *nick, int sql)
   
   /* rearrange the array */
   memmove(&nickserv_list[index], &nickserv_list[index+1], (nickserv_list_count - index - 1) * SIZEOF_VOIDP);
-  nickserv_list = (nickserv_dbase_data**)realloc(nickserv_list, (--nickserv_list_count) * SIZEOF_VOIDP);
+  nickserv_list = (nickserv_dbase_data**)xrealloc(nickserv_list, (--nickserv_list_count) * SIZEOF_VOIDP);
 
   /* if sql = true, remove from mysql aswell */
   if (sql)
@@ -616,40 +618,6 @@ int nickserv_dbase_checkbit(nickserv_dbase_data *nick, unsigned long bit)
 }
 
 /**************************************************************************************************
- * nickserv_dbase_set_is_ok
- **************************************************************************************************
- *   Converts the specified string to a numeric representation.
- *     0: if not recognized
- *     1: if off, no or 0
- *     2: if on, yes or 1
- **************************************************************************************************
- * Params:
- *   [IN] nickserv_dbase_data *nick: the ctruct inwhich the flags should be changed
- *   [IN] long bit          : the bit(s) to set
- *   [IN] int sql           : if the change should be written to mysql or not
- * Return;
- *  [OUT] int               : 0, 1 or 2, depending on the string
- **************************************************************************************************/
-int nickserv_dbase_set_is_ok(char *str)
-{
-  if (!str) return 0;
-  
-  /* uppercase the string */
-  str = uppercase(str);
-
-  /* compare to known words */
-  if (!strcmp(str, "YES")) return 2;
-  else if (!strcmp(str, "ON")) return 2;
-  else if (!strcmp(str, "1")) return 2;
-  else if (!strcmp(str, "OFF")) return 1;
-  else if (!strcmp(str, "NO")) return 1;
-  else if (!strcmp(str, "0")) return 1;
-
-  /* not a known word */
-  return 0;
-}
-
-/**************************************************************************************************
  * nickserv_dbase_valid_nick
  **************************************************************************************************
  *   Checks if the specified nick is valid, ie not containing any invalid characters
@@ -659,9 +627,9 @@ int nickserv_dbase_set_is_ok(char *str)
  * Return;
  *  [OUT] int               : bool value if 
  **************************************************************************************************/
-int nickserv_dbase_valid_nick(char *nick)
+int nickserv_dbase_valid_nick(const char *nick)
 {
-  char *p = nick;
+  const char *p = nick;
   int first = 1;
   if (strlen(nick) >= MAX_NICK_LEN) return 0;
   while (*p)
@@ -726,7 +694,7 @@ int nickserv_dbase_init_jupes(sock_info *sock)
  * Return;
  *  [OUT] int               : bool value if it exists or not
  **************************************************************************************************/
-int nickserv_dbase_email_exists(char *email)
+int nickserv_dbase_email_exists(const char *email)
 {
   int i;
   /* loop through the entire list, and compare email-addresses */
@@ -752,15 +720,20 @@ void nickserv_dbase_checkold(void *ptr)
 {
   int i;
   /* crate a new timer-object */
-  timer_event *te = (timer_event*)malloc(sizeof(timer_event));
-  unsigned long expire = (unsigned long)time(0) - (NICKSERV_EXPIRE_TIME);
+  timer_event *te = (timer_event*)xmalloc(sizeof(timer_event));
+  unsigned long now = (unsigned long)time(0);
+  unsigned long expire = now - (NICKSERV_EXPIRE_TIME);
 
   /* loop through all entries in the nickserv_list */
   for (i = 0; i < nickserv_list_count; i++)
+  {
+    if (nickserv_list[i]->entry)
+      nickserv_dbase_update(nickserv_list[i]->entry);
     /* if the entry is not marked noexpire, is not an oper and is not a juped nick */
     if (!(nickserv_list[i]->flags & (BITS_NICKSERV_NOEXPIRE | BITS_OPERSERV_OPER | BITS_NICKSERV_JUPED)))
+	{
       /* test if the entries lastlogin time is older then the expire time */
-      if (nickserv_list[i]->lastlogin < expire)
+      if (!nickserv_list[i]->entry && nickserv_list[i]->lastlogin < expire)
       {
         /* if yes, log the expire */
         log_command(LOG_NICKSERV, NULL, "[EXPIRE]", "%s %lu", nickserv_list[i]->nick, nickserv_list[i]->lastlogin);        
@@ -769,6 +742,8 @@ void nickserv_dbase_checkold(void *ptr)
         nickserv_dbase_unreg(nickserv_list[i]);
         i--;
       }
+    }
+  }
 
   /* set the variables in the timer-object, and add it to the timer-queue */
   te->data = NULL;
@@ -845,15 +820,15 @@ void nickserv_dbase_op_on_auth(dbase_nicks *nick)
 int nickserv_dbase_comment_add(nickserv_dbase_data *who, nickserv_dbase_data *nick, const char *comment, long date, int sql)
 {
   /* expand the comment array for the user, to make room for the new comment */
-  who->comments = (dbase_comment**)realloc(who->comments, (++who->comment_count)*SIZEOF_VOIDP);
-  who->comments[who->comment_count-1] = (dbase_comment*)malloc(sizeof(dbase_comment));
+  who->comments = (dbase_comment**)xrealloc(who->comments, (++who->comment_count)*SIZEOF_VOIDP);
+  who->comments[who->comment_count-1] = (dbase_comment*)xmalloc(sizeof(dbase_comment));
   
   /* save the person who wrote the comment */
-  who->comments[who->comment_count-1]->nick = (char*)malloc(strlen(nick->nick)+SIZEOF_CHAR);
+  who->comments[who->comment_count-1]->nick = (char*)xmalloc(strlen(nick->nick)+SIZEOF_CHAR);
   strcpy(who->comments[who->comment_count-1]->nick, nick->nick);
 
   /* save the comment */
-  who->comments[who->comment_count-1]->comment = (char*)malloc(strlen(comment)+SIZEOF_CHAR);
+  who->comments[who->comment_count-1]->comment = (char*)xmalloc(strlen(comment)+SIZEOF_CHAR);
   strcpy(who->comments[who->comment_count-1]->comment, comment);
   
   /* save the time the comment was written */
@@ -896,7 +871,7 @@ int nickserv_dbase_comment_del(nickserv_dbase_data *who, unsigned long nr, int s
 
   /* rearrange the array */
   memmove(&who->comments[nr], &who->comments[nr+1], (who->comment_count - nr - 1)*SIZEOF_VOIDP);
-  who->comments = (dbase_comment**)realloc(who->comments, (--who->comment_count)*SIZEOF_VOIDP);
+  who->comments = (dbase_comment**)xrealloc(who->comments, (--who->comment_count)*SIZEOF_VOIDP);
   
   /* if sql is set, remove from mysql aswell */
   if (sql)
@@ -948,12 +923,12 @@ int nickserv_dbase_notice(nickserv_dbase_data *who, const char *msg, ...)
   }
   
   /* add the notice to the users list of pending notices */
-  who->notices = (dbase_comment**)realloc(who->notices, (++who->notice_count) * SIZEOF_VOIDP);
-  who->notices[who->notice_count-1] = (dbase_comment*)malloc(sizeof(dbase_comment));
+  who->notices = (dbase_comment**)xrealloc(who->notices, (++who->notice_count) * SIZEOF_VOIDP);
+  who->notices[who->notice_count-1] = (dbase_comment*)xmalloc(sizeof(dbase_comment));
   
   who->notices[who->notice_count-1]->date = now;
-  who->notices[who->notice_count-1]->nick = (char*)malloc(strlen(conf->ns->nick) + SIZEOF_CHAR);
-  who->notices[who->notice_count-1]->comment = (char*)malloc(strlen(bufmsg) + SIZEOF_CHAR);
+  who->notices[who->notice_count-1]->nick = (char*)xmalloc(strlen(conf->ns->nick) + SIZEOF_CHAR);
+  who->notices[who->notice_count-1]->comment = (char*)xmalloc(strlen(bufmsg) + SIZEOF_CHAR);
   strcpy(who->notices[who->notice_count-1]->nick, conf->ns->nick);
   strcpy(who->notices[who->notice_count-1]->comment, bufmsg);
   

@@ -20,12 +20,12 @@ Eservices are being developed on the latest FreeBSD-stable available.
 Although eservices strive towards being compatible with the most systems
 possible if you are using GNU make.
 
-Eservices has been tested on the following systems:
+Eservices is known to work on at least the following platforms:
 
-* FreeBSD 4.x 
-Tested on 4.1, 4.2, 4.3, and 4.7-STABLE (x86) 
+  * FreeBSD
+  * Linux
+  * Cygwin
 
-  
 If you have tested eservices on a system not listed here, we would very
 much like to hear from you.
 
@@ -40,4 +40,7 @@ Contacts
 The AUTHORS file contains a list of all people who contributed to this
 piece of software.
 
-Bugs should be reported to one of the core developers.
+BUGS
+----
+
+Please report all bugs to coding@lists.exiled.net.

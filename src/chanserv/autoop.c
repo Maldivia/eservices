@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: autoop.c,v 1.3 2003/03/01 16:47:04 cure Exp $ */
+/* $Id: autoop.c,v 1.4 2004/01/07 15:52:54 cure Exp $ */
 
 #include <stdio.h>
 #include <string.h>
@@ -51,7 +51,7 @@
  * Return:
  *  [OUT] int return         : return 0 if success, anything else will cause the services to stop
  **************************************************************************************************/
- FUNC_COMMAND(chanserv_autoop)
+FUNC_COMMAND(chanserv_autoop)
 {
   chanserv_dbase_channel *ch;
   char *chan = getnext(params);
@@ -60,8 +60,12 @@
   int lvl;
   nickserv_dbase_data *ns;
   chanserv_dbase_access *ac;
-    /* If parameter not present, return syntax to user */
-  if (!nick) return com_message(sock, conf->cs->numeric, from->numeric, format, command_info->syntax);
+
+  /* If parameter not present, return syntax to user */
+  if (!chan) return com_message(sock, conf->cs->numeric, from->numeric, format, command_info->syntax);
+
+  /* if the nickname is not given, set nick to issuer of the command */
+  if (!nick) nick = from->nick;
 
   /* Is the specified channel regged ? */
   if (!chanserv_dbase_find_chan(chan)) return com_message(sock, conf->cs->numeric, from->numeric, format, CHANSERV_CHANNEL_NOT_FOUND, chan);

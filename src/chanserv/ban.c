@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: ban.c,v 1.2 2003/02/25 22:41:36 cure Exp $ */
+/* $Id: ban.c,v 1.3 2003/10/19 22:23:33 mr Exp $ */
 
 #include <stdio.h>
 #include <string.h>
@@ -78,7 +78,7 @@ FUNC_COMMAND(chanserv_ban)
 
   if (period == -1) return com_message(sock, conf->cs->numeric, from->numeric, format, CHANSERV_BAN_INVALID_PERIOD);
   
-  if ((strchr(mask, '!')) && (strchr(mask, '@'))) /* valid mask - hopefully */
+  if ((strchr(mask, '!')) && (strchr(mask, '!') < strchr(mask, '@'))) /* valid mask - hopefully */
   {
     strcpy(banmask, mask);
   }
@@ -88,7 +88,7 @@ FUNC_COMMAND(chanserv_ban)
     dbase_nicks *nick = nicks_getinfo(NULL, mask, -1);
     if (!nick) return com_message(sock, conf->cs->numeric, from->numeric, format, command_info->syntax);
       
-    snprintf(banmask, BUFFER_SIZE, "*!*%s@%s", nick->username, nick->host);
+    snprintf(banmask, BUFFER_SIZE, "*!*%s@%s", nick->username, nick->host + 1);
   }
   else
     return com_message(sock, conf->cs->numeric, from->numeric, format, command_info->syntax);

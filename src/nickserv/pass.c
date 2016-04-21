@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: pass.c,v 1.3 2003/03/01 16:47:08 cure Exp $ */
+/* $Id: pass.c,v 1.4 2004/01/16 15:53:20 mr Exp $ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -65,17 +65,12 @@ FUNC_COMMAND(nickserv_pass)
   if ((!oldpass) || (!newpass)) return com_message(sock, conf->ns->numeric, from->numeric, format, command_info->syntax);
 
   /* is the old password the correct password */
-  if (nickserv_dbase_validate_password(from->nickserv->nick, oldpass, from))
+  if (password_compare(from->nickserv, oldpass))
     return com_message(sock, conf->ns->numeric, from->numeric, format, NICKSERV_PASS_WRONG);
   else
   {
-    /* crypt the new password, save it and inform the user that the password is changed */
-    char buf[BUFFER_SIZE];
-    const char *pwd = ircd_crypt(newpass, from->host);
-    from->nickserv->password = (char *) realloc(from->nickserv->password, strlen(pwd) +1);
-    strcpy(from->nickserv->password, pwd);
-    snprintf(buf, BUFFER_SIZE, "UPDATE nickdata SET password='%s' WHERE nick='%s'", pwd, queue_escape_string(from->nickserv->nick));
-    queue_add(buf);
+    /* set the new password and inform the user that the password is changed */
+    nick_password_crypt(from->nickserv, newpass);
     com_message(sock, conf->ns->numeric, from->numeric, format, NICKSERV_PASS_OK, newpass);
   }
   

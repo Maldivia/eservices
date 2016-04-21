@@ -1,1 +1,61 @@
-Nothing to see here... configure... make...
+             Eservices - Exiled.Net IRC Services
+            -------------------------------------
+
+Eservices requirements:
+-----------------------
+
+* MySQL 3.23 or newer, or MySQL 4.x
+  It may work on older versions as well it hasn't been tested.
+  You can get MySQL from: http://www.mysql.com/downloads/index.html
+* SHA1 (via OpenSSL)
+  This is optional, but recommended. Is used for storing password
+  instead of crypt(), if the openssl development package is available
+  on your system (the include files and libraries).
+* It supports only the Undernet P10 protocol. 
+
+Installation:
+-------------
+
+1) From the root directory type: ./configure
+
+2) Edit include/setup.h for your needs. The only thing that you normally
+   need to change is the NETWORK_NAME.
+
+3) From the root directory type: make
+   Eservices are not built, and this might take a little while depending
+   on your machine. The binary is then copied to the root directory.
+
+4) Next step is to ready the MySQL database for the Eservices. First thing
+   you want to do is to create a new MySQL user and a database. Login as
+   the new user and switch to the database you just created.
+   Edit dbase-structure and change the admin info so it fits your description.
+   NOTE: if you are running the mySQL server on a system without crypt(), such
+         as Windows, change the line in dbase-structure to contain the encrypted
+        version of the password, since encrypt() will fail on such systems. 
+   Now type: source dbase-structure 
+   Make sure you are in the root directory when you do this, otherwise
+   supply full path to source.
+
+5) Copy services.conf-dist to services.conf and edit services.conf so it 
+   fits your setup.
+
+6) Suppose your ircd is configured you are now ready to run the services.
+   Type ./services in the root directory. If everthing was configured
+   correctly you should now be able to login to the account you specified
+   in dbase-structure.
+   NOTE: to access the operserv, you have to /oper on the server you're
+         connected to, auth to nickserv, and /msg nickserv set oper on
+
+NOTE: If you've fetched the source via CVS, you can autogenerate a configure
+script using 'autoconf' >= v2.5.
+
+Installation difficulties:
+--------------------------
+
+You may encounter some difficulties installing the services. If you 
+need help or have questions, you're more than welcome to contact us 
+via coding@lists.exiled.net. 
+
+Enjoy,
+
+Exiled.Net <http://www.exiled.net>

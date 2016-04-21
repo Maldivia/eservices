@@ -1,0 +1,9 @@
+Syntax: UNREG <nick> FORCE
+   
+You can drop a registered nickname using the UNREG command. 
+   
+Due to the irreversibility of this command, it must be validated
+with the FORCE confirm-string.
+   
+SEE ALSO:
+  FORBID

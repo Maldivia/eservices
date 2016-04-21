@@ -1,0 +1,16 @@
+Syntax: GREP <type> <mask>
+  
+This command allows you to search through the nickname database. 
+The <mask> argument can be used with wildcards. 
+  
+Type can be:
+             NAME (nickname)
+             EMAIL
+             HOSTNAME 
+    
+"*" (without the quotes) represents a phrase of one or more letters.
+"?" (without the quotes) represents exactly one letter.
+  
+SEE ALSO:
+  -
+

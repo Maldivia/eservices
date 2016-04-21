@@ -99,7 +99,7 @@ FUNC_COMMAND(operserv_mode)
           if (minus == '-')
           {
             if (!info->key) break;
-            key = (char *)realloc(key, strlen(info->key) + 1);
+            key = (char *)xrealloc(key, strlen(info->key) + 1);
             strcpy(key, info->key);
             channels_remkey(channr, chan, key);
             param = key;

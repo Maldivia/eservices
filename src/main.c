@@ -1,7 +1,7 @@
 /****************************************************************************
 * Exiled.net IRC Services                                                   *
-* Copyright (C) 2002  Michael Rasmussen <the_real@nerdheaven.dk>            *
-*                     Morten Post <cure@nerdheaven.dk>                      *
+* Copyright (C) 2002-2003  Michael Rasmussen <the_real@nerdheaven.dk>       *
+*                          Morten Post <cure@nerdheaven.dk>                 *
 *                                                                           *
 * This program is free software; you can redistribute it and/or modify      *
 * it under the terms of the GNU General Public License as published by      *
@@ -17,9 +17,9 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: main.c,v 1.3 2003/03/01 00:32:20 mr Exp $ */
+/* $Id: main.c,v 1.7 2004/01/17 02:17:18 cure Exp $ */
 
-#include <setup.h>
+#include "setup.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -35,10 +35,12 @@
 #include "log.h"
 #include "server.h"
 #include "errors.h"
+#include "nicks.h"
 #include "help.h"
 #include "nickserv.h"
 #include "chanserv.h"
 #include "timer.h"
+#include "sql.h"
 
 sock_info *irc = NULL;
 extern pthread_mutex_t sock_mutex;
@@ -53,6 +55,7 @@ void quit_do_cleanup(void)
   com_free_all();           /* Close ALL connections and free memory */
   debug_out(" |==> Executing pending mySQL queries...\n");
   queue_wait_until_empty(); /* Make the queue write all the pending data to mySQL before quitting */
+  sql_wait_until_empty();
   debug_out(" |==> Freeing memory used by databases...\n");
   help_free();
   dbase_clear();            /* Clear the dbase and free memory */
@@ -117,7 +120,7 @@ int main(int argc, char **argv)
 {
   int res;
   srand((unsigned long)time(NULL));
-
+  
   /* if (fork()) exit(0); */
 
   atexit(quit_do_cleanup);
@@ -133,15 +136,18 @@ int main(int argc, char **argv)
   
   if ((res = dbase_load_persistant())) quit_service(res);
   if ((res = queue_init())) quit_service(res);
+#ifdef SQL_INTERFACE_ACTIVATED
+  if ((res = sql_init())) quit_service(res);
+#endif
   help_load();
-  
+  nicks_init();  
 
   nickserv_dbase_checkold(NULL);
   chanserv_dbase_check_expire(NULL);
   
   pthread_mutex_init(&sock_mutex, NULL);
 
-  irc = com_sock_create(SOCK_SERVER);
+  irc = com_sock_create(SOCK_SERVER, 1);
   if (!com_connect(irc)) quit_service(ERROR_SERVER_COULD_NOT_CONNECT);
 
   irc->buffer[0] = '\0';

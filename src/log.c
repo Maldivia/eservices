@@ -1,7 +1,7 @@
 /****************************************************************************
 * Exiled.net IRC Services                                                   *
-* Copyright (C) 2002  Michael Rasmussen <the_real@nerdheaven.dk>            *
-*                     Morten Post <cure@nerdheaven.dk>                      *
+* Copyright (C) 2002-2003  Michael Rasmussen <the_real@nerdheaven.dk>       *
+*                          Morten Post <cure@nerdheaven.dk>                 *
 *                                                                           *
 * This program is free software; you can redistribute it and/or modify      *
 * it under the terms of the GNU General Public License as published by      *
@@ -17,13 +17,14 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: log.c,v 1.3 2003/02/21 23:12:19 mr Exp $ */
+/* $Id: log.c,v 1.7 2004/01/22 16:09:57 mr Exp $ */
+
+#include "setup.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
 
-#include "setup.h"
 #include "errors.h"
 #include "log.h"
 #include "config.h"
@@ -126,7 +127,6 @@ void log_command(log_type serv, dbase_nicks *from, const char *command, const ch
 {
   char tables[5][15] = {"-", "log_nickserv", "log_chanserv", "log_operserv", "log_multiserv"};
   char modes[5] = {'x', 'v', 'w', 'x', 'y'};
-  char *nicks[5] = {conf->os->nick, conf->ns->nick, conf->cs->nick, conf->os->nick, conf->ms->nick};
   char buf[BUFFER_SIZE], buf2[2*BUFFER_SIZE];
   
   char rnick_buf[12] = "Not authed", nick_buf[12] = "Services";
@@ -138,7 +138,8 @@ void log_command(log_type serv, dbase_nicks *from, const char *command, const ch
   vsnprintf(buf, BUFFER_SIZE, param, arglist);
   va_end(arglist);
   
-  if (conf) host = conf->host;
+  if (conf)
+    host = conf->host;
     
   if (from)
   {
@@ -152,15 +153,31 @@ void log_command(log_type serv, dbase_nicks *from, const char *command, const ch
   {
     time_t t;
     struct tm *td;
+    
+#ifdef HAVE_TM_ZONE
+    const char *tz;
 
     t = time(0);
     td = localtime(&t);
+    
+    tz = td->tm_zone;
+#else
+    const char *tz = "GMT";
 
-    log_write("[%2.2d/%2.2d/%4.4d %2.2d:%2.2d:%2.2d (%s)] %s\n", td->tm_mday, (td->tm_mon +1), (td->tm_year + 1900), td->tm_hour, td->tm_min, td->tm_sec, td->tm_zone, buf);
+    t = time(0);
+    td = gmtime(&t);
+#endif    
+
+
+    log_write("[%2.2d/%2.2d/%4.4d %2.2d:%2.2d:%2.2d (%s)] %s\n", td->tm_mday, (td->tm_mon +1), (td->tm_year + 1900), td->tm_hour, td->tm_min, td->tm_sec, tz, buf);
     return;
   }
-  
-  dcc_console_text(modes[serv], "[%s!%s!%s@%s] %s: %s %s", rnick, nick, username, host, nicks[serv], command, buf);
+ 
+  if (conf) 
+  {
+    char *nicks[5] = {conf->os->nick, conf->ns->nick, conf->cs->nick, conf->os->nick, conf->ms->nick};
+    dcc_console_text(modes[serv], "[%s!%s!%s@%s] %s: %s %s", rnick, nick, username, host, nicks[serv], command, buf);
+  }
 
   snprintf(buf2, 2*BUFFER_SIZE, "INSERT INTO %s (cmd_date,nick,userhost,command,params) VALUES (%lu,'%s','%s!%s@%s','%s','%s')", tables[serv], (unsigned long)time(0), rnick, nick, username, host, command, buf);
   queue_add(buf2);

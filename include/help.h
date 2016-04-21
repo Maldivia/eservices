@@ -1,7 +1,7 @@
 /****************************************************************************
 * Exiled.net IRC Services                                                   *
-* Copyright (C) 2002  Michael Rasmussen <the_real@nerdheaven.dk>            *
-*                     Morten Post <cure@nerdheaven.dk>                      *
+* Copyright (C) 2002-2003  Michael Rasmussen <the_real@nerdheaven.dk>       *
+*                          Morten Post <cure@nerdheaven.dk>                 *
 *                                                                           *
 * This program is free software; you can redistribute it and/or modify      *
 * it under the terms of the GNU General Public License as published by      *
@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: help.h,v 1.1.1.1 2002/08/20 15:20:02 mr Exp $ */
+/* $Id: help.h,v 1.3 2003/10/19 22:21:38 mr Exp $ */
 
 #ifndef INC_HELP_H
 #define INC_HELP_H
@@ -40,9 +40,9 @@ int help_load(void);
 int help_free(void);
 int help_free_internal(help_db *db);
 int help_print(help_db *db);
-help_db *help_load_db(char *dir);
-help_db *help_search(help_db *db, char *entry);
-int help_show(sock_info *sock, char *from, char *to, char *format, help_db *db);
+help_db *help_load_db(const char *dir);
+help_db *help_search(help_db *db, const char *entry);
+int help_show(sock_info *sock, const char *from, const char *to, const char *format, help_db *db);
 
 #endif /* INC_HELP_H */
 

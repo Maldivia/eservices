@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: chowner.c,v 1.4 2003/03/01 16:47:04 cure Exp $ */
+/* $Id: chowner.c,v 1.6 2004/01/17 14:47:19 mr Exp $ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -32,8 +32,7 @@
 #include "queue.h"
 #include "log.h"
 
-#define CHANSERV_CHOWNER_OK           "Owner of %s sucessfully changed to %s.\n"\
-                                      "Your access has been decreased to 499."
+#define CHANSERV_CHOWNER_OK           "Owner of %s sucessfully changed to %s.\nYour access has been decreased to 499."
 #define CHANSERV_CHOWNER_NO_ACCESS    "You cannot to give away %s to %s when he/she isn't on the access list."
 
 /**************************************************************************************************
@@ -82,7 +81,7 @@ FUNC_COMMAND(chanserv_chowner)
   
   if (chanserv_dbase_check_access(from->nickserv, ch, CHANSERV_LEVEL_OWNER)) levelok = 1;
   if ((acc = chanserv_dbase_has_access(nick, ch))) userok = 1;
-  if (!strcmp(from->nickserv->password, ircd_crypt(pass, from->nickserv->password))) passok = 1;
+  if (!password_compare(from->nickserv, pass)) passok = 1;
   
   if (operserv_have_access(from->nickserv->flags, BITS_OPERSERV_CS_ADMIN))
   {
@@ -119,7 +118,7 @@ FUNC_COMMAND(chanserv_chowner)
   else
     chanserv_dbase_access_add(ch, info, CHANSERV_LEVEL_OWNER, 1, COMMIT_TO_MYSQL);
     
-  ch->owner = (char *)realloc(ch->owner, strlen(info->nick) + SIZEOF_CHAR);
+  ch->owner = (char *)xrealloc(ch->owner, strlen(info->nick) + SIZEOF_CHAR);
   strcpy(ch->owner, info->nick);
 
   if (oper)
@@ -128,6 +127,7 @@ FUNC_COMMAND(chanserv_chowner)
     nickserv_dbase_notice(info, "You have been given ownership of %s by %s.", ch->name, from->nickserv->nick);
     if (own)
       nickserv_dbase_notice(own->nick, "%s has changed the ownership of %s to %s.", from->nickserv->nick, ch->name, info->nick);
+    return 0;
   }
   else
   {

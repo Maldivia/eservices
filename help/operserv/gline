@@ -1,7 +1,13 @@
-Syntax: GLINE <user@host> <duration> <reason>
+Syntax: GLINE <user@host|nick|channel> <duration> <reason>
    
 GLINE issues a network wide ban on <user@host> lasting duration. For 
 info about the format of duration, see HELP BAN in channel services.
+
+If a <nick> is specified instead of a valid user@host, the hostname
+for the specified nick is used (*@host).
+
+If a <channel> is specified, all users in the specified channel (except
+opers) are glined individually.
    
 SEE ALSO:
   UNGLINE

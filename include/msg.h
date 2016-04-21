@@ -1,7 +1,7 @@
 /****************************************************************************
 * Exiled.net IRC Services                                                   *
-* Copyright (C) 2002  Michael Rasmussen <the_real@nerdheaven.dk>            *
-*                     Morten Post <cure@nerdheaven.dk>                      *
+* Copyright (C) 2002-2003  Michael Rasmussen <the_real@nerdheaven.dk>       *
+*                          Morten Post <cure@nerdheaven.dk>                 *
 *                                                                           *
 * This program is free software; you can redistribute it and/or modify      *
 * it under the terms of the GNU General Public License as published by      *
@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: msg.h,v 1.12 2003/02/25 22:41:04 cure Exp $ */
+/* $Id: msg.h,v 1.22 2004/08/05 00:01:57 mr Exp $ */
 
 #ifndef INC_MSG_H
 #define INC_MSG_H
@@ -46,9 +46,13 @@ struct parser_command_data parser_nickserv_commands[] =
   {"SET",          nickserv_set,          1,                          0,                        NICKSERV_SYNTAX_SET},
    /* oper */
   {"COMMENT",      nickserv_comment,      1,                          BITS_OPERSERV_NS_OPER,    NICKSERV_SYNTAX_COMMENT},
+  {"GREP",         nickserv_grep,         1,                          BITS_OPERSERV_NS_OPER,    NICKSERV_SYNTAX_GREP},
+  {"NOEXPIRE",     nickserv_noexpire,     1,                          BITS_OPERSERV_NS_OPER,    NICKSERV_SYNTAX_NOEXPIRE},
    /* admin */
+  {"CHNICK",       nickserv_chnick,       1,                          BITS_OPERSERV_NS_ADMIN,   NICKSERV_SYNTAX_CHNICK},
   {"CHPASS",       nickserv_chpass,       1,                          BITS_OPERSERV_NS_ADMIN,   NICKSERV_SYNTAX_CHPASS},
   {"FORBID",       nickserv_forbid,       1,                          BITS_OPERSERV_NS_ADMIN,   NICKSERV_SYNTAX_FORBID},
+  {"UNREG",        nickserv_unreg,        1,                          BITS_OPERSERV_NS_ADMIN,   NICKSERV_SYNTAX_UNREG},
   {"",             NULL,                  0xffffffff,                 0,                        NULL},
   {NULL,           NULL,                  0xffffffff,                 0,                        NULL}
 };
@@ -86,6 +90,7 @@ struct parser_command_data parser_chanserv_commands[] =
    /* level 450 */
   {"CLEARMODES",   chanserv_clearmodes,   CHANSERV_LEVEL_CLEARMODES, 0,                        CHANSERV_SYNTAX_CLEARMODES},
   {"CYCLE",        chanserv_cycle,        CHANSERV_LEVEL_CYCLE,      0,                        CHANSERV_SYNTAX_CYCLE},
+  {"SET",          chanserv_set,          CHANSERV_LEVEL_SET,        0,                        CHANSERV_SYNTAX_SET},
    /* level 500 */
   {"CHOWNER",      chanserv_chowner,      CHANSERV_LEVEL_CHOWNER,    0,                        CHANSERV_SYNTAX_CHOWNER},
   {"DROP",         chanserv_drop,         CHANSERV_LEVEL_DROP,       0,                        CHANSERV_SYNTAX_DROP},
@@ -111,6 +116,8 @@ struct parser_command_data parser_operserv_commands[] =
    /* +O */
   {"HELP",         operserv_help,         1,                BITS_OPERSERV_OPER,                OPERSERV_SYNTAX_HELP},
   {"BROADCAST",    operserv_broadcast,    1,                BITS_OPERSERV_OPER,                OPERSERV_SYNTAX_BROADCAST},
+  {"IGNORES",      operserv_ignores,      1,                BITS_OPERSERV_OPER,                OPERSERV_SYNTAX_IGNORES},
+  {"NETINFO",      operserv_netinfo,      1,                BITS_OPERSERV_OPER,                OPERSERV_SYNTAX_NETINFO},
   {"OPERLIST",     operserv_operlist,     1,                BITS_OPERSERV_OPER,                OPERSERV_SYNTAX_OPERLIST},
   {"TRACE",        operserv_trace,        1,                BITS_OPERSERV_OPER,                OPERSERV_SYNTAX_TRACE},
    /* +M */
@@ -118,6 +125,7 @@ struct parser_command_data parser_operserv_commands[] =
   {"OP",           operserv_op,           1,                BITS_OPERSERV_MODES,               OPERSERV_SYNTAX_OP},
    /* +G */
   {"GLINE",        operserv_gline,        1,                BITS_OPERSERV_GLINE,               OPERSERV_SYNTAX_GLINE},
+  {"KILLCHAN",     operserv_killchan,     1,                BITS_OPERSERV_GLINE,               OPERSERV_SYNTAX_KILLCHAN},
   {"UNGLINE",      operserv_ungline,      1,                BITS_OPERSERV_GLINE,               OPERSERV_SYNTAX_UNGLINE},
    /* +a */
   {"ACCESS",       operserv_access,       1,                BITS_OPERSERV_SERVICES_SUB_ADMIN,  OPERSERV_SYNTAX_ACCESS},
@@ -144,6 +152,8 @@ struct parser_command_data parser_dcc_commands[] =
   {"CLOSE",        dcc_close,             1,                BITS_OPERSERV_OPER,                DCC_SYNTAX_CLOSE},
   {"CONSOLE",      dcc_console,           1,                BITS_OPERSERV_OPER,                DCC_SYNTAX_CONSOLE},
   {"HELP",         dcc_help,              1,                BITS_OPERSERV_OPER,                DCC_SYNTAX_HELP},
+  {"IGNORES",      operserv_ignores,      1,                BITS_OPERSERV_OPER,                OPERSERV_SYNTAX_IGNORES},
+  {"NETINFO",      operserv_netinfo,      1,                BITS_OPERSERV_OPER,                OPERSERV_SYNTAX_NETINFO},
   {"OPERLIST",     operserv_operlist,     1,                BITS_OPERSERV_OPER,                OPERSERV_SYNTAX_OPERLIST},
   {"SAY",          dcc_say,               1,                BITS_OPERSERV_OPER,                DCC_SYNTAX_SAY},
   {"TRACE",        operserv_trace,        1,                BITS_OPERSERV_OPER,                OPERSERV_SYNTAX_TRACE},
@@ -153,31 +163,24 @@ struct parser_command_data parser_dcc_commands[] =
   {"OP",           operserv_op,           1,                BITS_OPERSERV_MODES,               OPERSERV_SYNTAX_OP},
    /* +G */
   {"GLINE",        operserv_gline,        1,                BITS_OPERSERV_GLINE,               OPERSERV_SYNTAX_GLINE},
+  {"KILLCHAN",     operserv_killchan,     1,                BITS_OPERSERV_GLINE,               OPERSERV_SYNTAX_KILLCHAN},
   {"UNGLINE",      operserv_ungline,      1,                BITS_OPERSERV_GLINE,               OPERSERV_SYNTAX_UNGLINE},
    /* +c */
-  {"CCOMMENT",     chanserv_comment,      1,                BITS_OPERSERV_CS_OPER,             CHANSERV_SYNTAX_COMMENT},
-  {"CYCLE",        chanserv_cycle,        1,                BITS_OPERSERV_CS_OPER,             CHANSERV_SYNTAX_CYCLE},
-  {"CINFO",        chanserv_info,         1,                BITS_OPERSERV_CS_OPER,             CHANSERV_SYNTAX_INFO},
-  {"DISABLE",      chanserv_disable,      1,                BITS_OPERSERV_CS_OPER,             CHANSERV_SYNTAX_DISABLE},
-  {"ENABLE",       chanserv_enable,       1,                BITS_OPERSERV_CS_OPER,             CHANSERV_SYNTAX_ENABLE},
-  {"GREP",         chanserv_grep,         1,                BITS_OPERSERV_CS_OPER,             CHANSERV_SYNTAX_GREP},
+  {"CGREP",        chanserv_grep,         1,                BITS_OPERSERV_CS_OPER,             CHANSERV_SYNTAX_GREP},
   {"LIST",         chanserv_lister,       1,                BITS_OPERSERV_CS_OPER,             CHANSERV_SYNTAX_LIST},
-  {"NOEXPIRE",     chanserv_noexpire,     1,                BITS_OPERSERV_CS_OPER,             CHANSERV_SYNTAX_NOEXPIRE},
    /* +C */
-  {"CHOWNER",      chanserv_chowner,      1,                BITS_OPERSERV_CS_ADMIN,            CHANSERV_SYNTAX_CHOWNER_ADMIN},
-  {"UNREG",        chanserv_unreg,        1,                BITS_OPERSERV_CS_ADMIN,            CHANSERV_SYNTAX_UNREG},
    /* +n */
-  {"NCOMMENT",     nickserv_comment,      1,                BITS_OPERSERV_NS_OPER,             NICKSERV_SYNTAX_COMMENT},
-  {"NINFO",        nickserv_info,         1,                BITS_OPERSERV_NS_OPER,             NICKSERV_SYNTAX_INFO},
+  {"NGREP",        nickserv_grep,         1,                BITS_OPERSERV_NS_OPER,             NICKSERV_SYNTAX_GREP},
    /* +N */
-  {"CHPASS",       nickserv_chpass,       1,                BITS_OPERSERV_NS_ADMIN,            NICKSERV_SYNTAX_CHPASS},
   {"FORBID",       nickserv_forbid,       1,                BITS_OPERSERV_NS_ADMIN,            NICKSERV_SYNTAX_FORBID},
    /* +a */
   {"ACCESS",       operserv_access,       1,                BITS_OPERSERV_SERVICES_SUB_ADMIN,  OPERSERV_SYNTAX_ACCESS},
    /* +A */
   {"DIE",          operserv_die,          1,                BITS_OPERSERV_SERVICES_ADMIN,      OPERSERV_SYNTAX_DIE},
   {"REMOPER",      operserv_remoper,      1,                BITS_OPERSERV_SERVICES_ADMIN,      OPERSERV_SYNTAX_REMOPER},
-  
+#ifdef SQL_INTERFACE_ACTIVATED
+  {"SQL",          operserv_sql,          1,                BITS_OPERSERV_DEVELOPER,           OPERSERV_SYNTAX_SQL},
+#endif
    /* Over and out */
   {"",             NULL,                  0xffffffff,       0,                                 ""},
   {NULL,           NULL,                  0xffffffff,       0,                                 NULL}
@@ -204,6 +207,7 @@ struct parser_p10_data parser_p10_commands[] =
   {"EB",      p10_end_of_burst},
   {"EA",      p10_end_of_burst_acknowledge},
   {"G",       p10_ping},
+  {"Z",       p10_pong},
   {"SQ",      p10_squit},
   {"V",       p10_version},
   {NULL,      NULL}

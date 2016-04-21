@@ -71,7 +71,7 @@ FUNC_COMMAND(chanserv_clearmodes)
         com_send(irc, "%s M %s -b %s\n", conf->cs->numeric, chan, data->bans[--data->bancount]);
         xfree(data->bans[data->bancount]);
       }
-      data->bans = (char **)realloc(data->bans, 0);
+      data->bans = (char **)xrealloc(data->bans, 0);
       if (data->key)
         com_send(irc, "%s M %s +nt-ispmlk %s\n", conf->cs->numeric, chan, data->key);
       else

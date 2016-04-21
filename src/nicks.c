@@ -1,7 +1,7 @@
 /****************************************************************************
 * Exiled.net IRC Services                                                   *
-* Copyright (C) 2002  Michael Rasmussen <the_real@nerdheaven.dk>            *
-*                     Morten Post <cure@nerdheaven.dk>                      *
+* Copyright (C) 2002-2003  Michael Rasmussen <the_real@nerdheaven.dk>       *
+*                          Morten Post <cure@nerdheaven.dk>                 *
 *                                                                           *
 * This program is free software; you can redistribute it and/or modify      *
 * it under the terms of the GNU General Public License as published by      *
@@ -17,13 +17,14 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: nicks.c,v 1.3 2003/01/17 18:32:40 mr Exp $ */
+/* $Id: nicks.c,v 1.6 2003/10/20 11:48:11 cure Exp $ */
+
+#include "setup.h"
 
 #include <stdlib.h>
 #include <stdio.h>
 #include <string.h>
 
-#include "setup.h"
 #include "dbase.h"
 #include "server.h"
 #include "misc_func.h"
@@ -31,10 +32,18 @@
 #include "log.h"
 #include "dcc.h"
 
+list_data nicks;
+list_data nicks_num;
+/*
 dbase_nicks **nicks       = NULL;
 dbase_nicks **nicks_num   = NULL;
 long          nicks_count = 0;
-
+*/
+void nicks_init(void)
+{
+  nicks = irc_list_create();
+  nicks_num = irc_list_create();
+}
 
 /********************************************************************
   NICKS_SEARCH_*
@@ -51,12 +60,12 @@ el. [in]  long numeric = personenes numeric
 ********************************************************************/
 long nicks_search_nick(const char *nick)
 {
-  return nicks_internal_search(0, nicks_count-1, nick);
+  return nicks_internal_search(0, nicks.size - 1, nick);
 }
 
 long nicks_search_numeric(const char *numeric)
 {
-  return nicks_internal_num_search(0, nicks_count-1, numeric);
+  return nicks_internal_num_search(0, nicks_num.size - 1, numeric);
 }
 
 
@@ -80,7 +89,7 @@ long nicks_internal_search(long low, long high, const char *nick)
   int res;
   long mid = high - ((high - low) / 2);
   if (low > high) return -1-low;
-  res = strcasecmp(nick, nicks[mid]->nick);
+  res = strcasecmp(nick, nicks.list.nicks[mid]->nick);
   if (res < 0) return nicks_internal_search(low, mid-1, nick);
   else if (res > 0) return nicks_internal_search(mid+1, high, nick);
   else return mid;
@@ -106,7 +115,7 @@ long nicks_internal_num_search(long low, long high, const char *numeric)
   int res;
   long mid = high - ((high - low) / 2);
   if (low > high) return -1-low;
-  res = strcmp(numeric, nicks_num[mid]->numeric);
+  res = strcmp(numeric, nicks_num.list.nicks[mid]->numeric);
   if (res < 0) return nicks_internal_num_search(low, mid-1, numeric);
   else if (res > 0) return nicks_internal_num_search(mid+1, high, numeric);
   else return mid;
@@ -137,67 +146,61 @@ long nicks_add(dbase_nicks *info, char *modes)
 {
   long nr, num;
   if ((nr = nicks_search_nick(info->nick)) < 0)
-  {
+  {    
     nr += 1;
     nr *= -1;
-    nicks = (dbase_nicks **)realloc(nicks, (nicks_count+1) * sizeof(dbase_nicks*));
-    if (nr < (nicks_count)) memmove(&nicks[nr+1], &nicks[nr], (nicks_count - nr) * sizeof(dbase_nicks*));
-    nicks[nr] = (dbase_nicks*)malloc(sizeof(dbase_nicks));
+    irc_list_add(&nicks, nr, xmalloc(sizeof(dbase_nicks)));
   }
   else
   {
-    nicks_remove(nicks[nr]->numeric);
+    nicks_remove(nicks.list.nicks[nr]->numeric);
     return nicks_add(info, modes);
   }
+
   if ((num = nicks_search_numeric(info->numeric)) < 0)
   {
     num += 1;
     num *= -1;
-    nicks_num = (dbase_nicks**)realloc(nicks_num, (nicks_count+1) * sizeof(dbase_nicks*));
-    if (num < (nicks_count)) memmove(&nicks_num[num+1], &nicks_num[num], (nicks_count - num) * sizeof(dbase_nicks*));
+    irc_list_add(&nicks_num, num, nicks.list.nicks[nr]);
   }
   else
   {
-    nicks_remove(nicks_num[num]->numeric);
+    nicks_remove(nicks_num.list.nicks[num]->numeric);
     return nicks_add(info, modes);
   }
 
-  nicks_count++;
+  nicks.list.nicks[nr]->nick = (char *)xmalloc(sizeof(char)*(strlen(info->nick)+1));
+  strcpy(nicks.list.nicks[nr]->nick, info->nick);
 
-  nicks_num[num] = nicks[nr];
+  nicks.list.nicks[nr]->numeric = (char *)xmalloc(sizeof(char)*(strlen(info->numeric)+1));
+  strcpy(nicks.list.nicks[nr]->numeric, info->numeric);
 
-  nicks[nr]->nick = (char *)malloc(sizeof(char)*(strlen(info->nick)+1));
-  strcpy(nicks[nr]->nick, info->nick);
+  nicks.list.nicks[nr]->username = (char *)xmalloc(sizeof(char)*(strlen(info->username)+1));
+  strcpy(nicks.list.nicks[nr]->username, info->username);
 
-  nicks[nr]->numeric = (char *)malloc(sizeof(char)*(strlen(info->numeric)+1));
-  strcpy(nicks[nr]->numeric, info->numeric);
+  nicks.list.nicks[nr]->host = (char *)xmalloc(sizeof(char)*(strlen(info->host)+1));
+  strcpy(nicks.list.nicks[nr]->host, info->host);
 
-  nicks[nr]->username = (char *)malloc(sizeof(char)*(strlen(info->username)+1));
-  strcpy(nicks[nr]->username, info->username);
+  nicks.list.nicks[nr]->userinfo = (char *)xmalloc(sizeof(char)*(strlen(info->userinfo)+1));
+  strcpy(nicks.list.nicks[nr]->userinfo, info->userinfo);
 
-  nicks[nr]->host = (char *)malloc(sizeof(char)*(strlen(info->host)+1));
-  strcpy(nicks[nr]->host, info->host);
+  nicks.list.nicks[nr]->away = NULL;
 
-  nicks[nr]->userinfo = (char *)malloc(sizeof(char)*(strlen(info->userinfo)+1));
-  strcpy(nicks[nr]->userinfo, info->userinfo);
+  nicks.list.nicks[nr]->channels = (dbase_channels_nicks **)xcalloc(0, sizeof(dbase_channels_nicks*));
 
-  nicks[nr]->away = NULL;
+  nicks.list.nicks[nr]->IP = info->IP;
+  nicks.list.nicks[nr]->timestamp = info->timestamp;
+  nicks.list.nicks[nr]->hopcount = info->hopcount;
+  nicks.list.nicks[nr]->channels_count = 0;
+  nicks.list.nicks[nr]->modes = 0;  
+  nicks.list.nicks[nr]->nickserv = NULL;
 
-  nicks[nr]->channels = (dbase_channels_nicks **)calloc(0, sizeof(dbase_channels_nicks*));
+  nicks.list.nicks[nr]->ignored = 0;
+  nicks.list.nicks[nr]->ignore_lines = 0;
+  nicks.list.nicks[nr]->ignore_ts[0] = 0;
+  nicks.list.nicks[nr]->ignore_ts[1] = 0;
 
-  nicks[nr]->IP = info->IP;
-  nicks[nr]->timestamp = info->timestamp;
-  nicks[nr]->hopcount = info->hopcount;
-  nicks[nr]->channels_count = 0;
-  nicks[nr]->modes = 0;  
-  nicks[nr]->nickserv = NULL;
-
-  nicks[nr]->ignored = 0;
-  nicks[nr]->ignore_lines = 0;
-  nicks[nr]->ignore_ts[0] = 0;
-  nicks[nr]->ignore_ts[1] = 0;
-
-  nicks_setmode(nicks[nr]->numeric, modes);
+  nicks_setmode(nicks.list.nicks[nr]->numeric, modes);
 
   return num;
 }
@@ -219,42 +222,38 @@ long nicks_remove(const char *numeric)
 {
   long nr, index, i;
   if ((index = nicks_search_numeric(numeric)) < 0) return index;
-  if ((nr = nicks_search_nick(nicks_num[index]->nick)) < 0) return nr;
+  if ((nr = nicks_search_nick(nicks_num.list.nicks[index]->nick)) < 0) return nr;
 
-  for (i = nicks[nr]->channels_count; i > 0; i--)
+  for (i = nicks.list.nicks[nr]->channels_count; i > 0; i--)
   {
-    if (channels_userpart(-1, nicks[nr]->channels[i-1]->channel->name, nicks[nr]->numeric) < 0)
+    if (channels_userpart(-1, nicks.list.nicks[nr]->channels[i-1]->channel->name, nicks.list.nicks[nr]->numeric) < 0)
     {
-      debug_out("We're fucked !!!! - %lu %s\n", nicks[nr]->channels_count, nicks[nr]->channels[0]->channel->name);
-      log_command(LOG_SERVICES, NULL, "", "BUG! nicks_remove - %lu %s", nicks[nr]->channels_count, nicks[nr]->channels[0]->channel->name);
+      debug_out("We're fucked !!!! - %lu %s\n", nicks.list.nicks[nr]->channels_count, nicks.list.nicks[nr]->channels[0]->channel->name);
+      log_command(LOG_SERVICES, NULL, "", "BUG! nicks_remove - %lu %s", nicks.list.nicks[nr]->channels_count, nicks.list.nicks[nr]->channels[0]->channel->name);
     }
   }
 
-  if (nicks[nr]->channels_count)
+  if (nicks.list.nicks[nr]->channels_count)
   {
-    debug_out("WARNING !!!! Memory leak - not all channels was parted in memory (%lu)!!!!\n", nicks[nr]->channels_count);
+    debug_out("WARNING !!!! Memory leak - not all channels was parted in memory (%lu)!!!!\n", nicks.list.nicks[nr]->channels_count);
   }
   
-  dcc_free(nicks[nr]);
+  dcc_free(nicks.list.nicks[nr]);
 
-  if (nicks[nr])
+  if (nicks.list.nicks[nr])
   {
-    if (nicks[nr]->nickserv) nicks[nr]->nickserv->entry = NULL;
-    xfree(nicks[nr]->nick);
-    xfree(nicks[nr]->numeric);
-    xfree(nicks[nr]->username);
-    xfree(nicks[nr]->host);
-    xfree(nicks[nr]->userinfo);
-    xfree(nicks[nr]->away);
-    xfree(nicks[nr]);
+    if (nicks.list.nicks[nr]->nickserv) nicks.list.nicks[nr]->nickserv->entry = NULL;
+    xfree(nicks.list.nicks[nr]->nick);
+    xfree(nicks.list.nicks[nr]->numeric);
+    xfree(nicks.list.nicks[nr]->username);
+    xfree(nicks.list.nicks[nr]->host);
+    xfree(nicks.list.nicks[nr]->userinfo);
+    xfree(nicks.list.nicks[nr]->away);
+    xfree(nicks.list.nicks[nr]);
   }
 
-  nicks_count--;
-  memmove(&nicks[nr], &nicks[nr+1], (nicks_count - nr) * sizeof(dbase_nicks*));
-  nicks = (dbase_nicks**)realloc(nicks, nicks_count * sizeof(dbase_nicks*));
-
-  memmove(&nicks_num[index], &nicks_num[index+1], (nicks_count - index) * sizeof(dbase_nicks*));
-  nicks_num = (dbase_nicks**)realloc(nicks_num, nicks_count * sizeof(dbase_nicks*));
+  irc_list_delete(&nicks, nr);
+  irc_list_delete(&nicks_num, index);
 
   return index;
 }
@@ -275,19 +274,16 @@ long nicks_renick(const char *numeric, const char *newnick)
 {
   long index, nr, to;
   if ((index = nicks_search_numeric(numeric)) < 0) return index;
-  if ((nr = nicks_search_nick(nicks_num[index]->nick)) < 0) return nr;
+  if ((nr = nicks_search_nick(nicks_num.list.nicks[index]->nick)) < 0) return nr;
   if ((to = nicks_search_nick(newnick)) >= 0) return -1-to;
   to += 1;
   to *= -1;
 
   if (to > nr) to--;
+  irc_list_move(&nicks, nr, to);
 
-  nicks_num[index]->nick = (char *)realloc(nicks_num[index]->nick, sizeof(char)*(strlen(newnick)+1));
-  strcpy(nicks_num[index]->nick, newnick);
-
-  if (to > nr) memmove(&nicks[nr], &nicks[nr+1], (to - nr) * sizeof(dbase_nicks*));
-  else if (nr > to) memmove(&nicks[to+1], &nicks[to], (nr - to) * sizeof(dbase_nicks*));
-  nicks[to] = nicks_num[index];
+  nicks_num.list.nicks[index]->nick = (char *)xrealloc(nicks_num.list.nicks[index]->nick, sizeof(char)*(strlen(newnick)+1));
+  strcpy(nicks_num.list.nicks[index]->nick, newnick);
 
   return index;
 }
@@ -316,8 +312,8 @@ long nicks_setmode(const char *numeric, char *modes)
     else if (modes[i] == '-') check = 0;
     else if ((modes[i] >= 'a') && (modes[i] <= 'z'))
     {
-      if (check) bitadd(nicks_num[index]->modes, modes[i]-'a');
-      else bitdel(nicks_num[index]->modes, modes[i]-'a');
+      if (check) bitadd(nicks_num.list.nicks[index]->modes, modes[i]-'a');
+      else bitdel(nicks_num.list.nicks[index]->modes, modes[i]-'a');
     }   
   }
   return index;
@@ -341,13 +337,13 @@ long nicks_setaway(const char *numeric, const char *awaymsg)
   if ((index = nicks_search_numeric(numeric)) < 0) return index;
   if (awaymsg)
   {
-  nicks_num[index]->away = (char *)realloc(nicks_num[index]->away, sizeof(char)*(strlen(awaymsg)+1));
-  strcpy(nicks_num[index]->away, awaymsg);
+  nicks_num.list.nicks[index]->away = (char *)xrealloc(nicks_num.list.nicks[index]->away, sizeof(char)*(strlen(awaymsg)+1));
+  strcpy(nicks_num.list.nicks[index]->away, awaymsg);
   }
   else
   {
-    free(nicks_num[index]->away);
-    nicks_num[index]->away = NULL;
+    free(nicks_num.list.nicks[index]->away);
+    nicks_num.list.nicks[index]->away = NULL;
   }
   return index;
 }
@@ -368,15 +364,15 @@ long nicks_join_channel(const char *numeric, dbase_channels_nicks *cn)
   long index, nr;
   index = nicks_search_numeric(numeric);
   if (index < 0) return index;
-  cn->nick = nicks_num[index];
-  if ((nr = nicks_chan_search(nicks_num[index]->channels, 0, nicks_num[index]->channels_count-1, cn->channel->name)) < 0)
+  cn->nick = nicks_num.list.nicks[index];
+  if ((nr = nicks_chan_search(nicks_num.list.nicks[index]->channels, 0, nicks_num.list.nicks[index]->channels_count-1, cn->channel->name)) < 0)
   {
     nr += 1;
     nr *= -1;
-    nicks_num[index]->channels = (dbase_channels_nicks **)realloc(nicks_num[index]->channels, (nicks_num[index]->channels_count+1) * sizeof(dbase_channels_nicks*));
-    if (nr < (nicks_num[index]->channels_count++))
-      memmove(&nicks_num[index]->channels[nr+1], &nicks_num[index]->channels[nr], (nicks_num[index]->channels_count - nr - 1) * sizeof(dbase_channels_nicks*));
-    nicks_num[index]->channels[nr] = cn;
+    nicks_num.list.nicks[index]->channels = (dbase_channels_nicks **)xrealloc(nicks_num.list.nicks[index]->channels, (nicks_num.list.nicks[index]->channels_count+1) * sizeof(dbase_channels_nicks*));
+    if (nr < (nicks_num.list.nicks[index]->channels_count++))
+      memmove(&nicks_num.list.nicks[index]->channels[nr+1], &nicks_num.list.nicks[index]->channels[nr], (nicks_num.list.nicks[index]->channels_count - nr - 1) * sizeof(dbase_channels_nicks*));
+    nicks_num.list.nicks[index]->channels[nr] = cn;
   }
   return nr;
 }
@@ -386,11 +382,11 @@ long nicks_part_channel(const char *numeric, dbase_channels_nicks *cn)
   long index, nr;
   index = nicks_search_numeric(numeric);
   if (index < 0) return index;  
-  if ((nr = nicks_chan_search(nicks_num[index]->channels, 0, nicks_num[index]->channels_count-1, cn->channel->name)) < 0)
+  if ((nr = nicks_chan_search(nicks_num.list.nicks[index]->channels, 0, nicks_num.list.nicks[index]->channels_count-1, cn->channel->name)) < 0)
     return nr;
   
-  memmove(&nicks_num[index]->channels[nr], &nicks_num[index]->channels[nr+1], (nicks_num[index]->channels_count - nr - 1) * sizeof(dbase_channels_nicks*));
-  nicks_num[index]->channels = (dbase_channels_nicks **)realloc(nicks_num[index]->channels, (--nicks_num[index]->channels_count) * sizeof(dbase_channels_nicks*));
+  memmove(&nicks_num.list.nicks[index]->channels[nr], &nicks_num.list.nicks[index]->channels[nr+1], (nicks_num.list.nicks[index]->channels_count - nr - 1) * sizeof(dbase_channels_nicks*));
+  nicks_num.list.nicks[index]->channels = (dbase_channels_nicks **)xrealloc(nicks_num.list.nicks[index]->channels, (--nicks_num.list.nicks[index]->channels_count) * sizeof(dbase_channels_nicks*));
   
   return nr;
 }
@@ -412,19 +408,19 @@ long nicks_part_channel(const char *numeric, dbase_channels_nicks *cn)
 dbase_nicks *nicks_getinfo(const char *numeric, const char *nick, int nr)
 {
   long index;
-  if ((nr >= 0) && (nr < nicks_count))
+  if ((nr >= 0) && (nr < nicks_num.size))
   {
-    return nicks_num[nr];
+    return nicks_num.list.nicks[nr];
   }
   else if (numeric)
   {
     if ((index = nicks_search_numeric(numeric)) < 0) return NULL;
-    return nicks_num[index];
+    return nicks_num.list.nicks[index];
   }
   else if (nick)
   {
     if ((index = nicks_search_nick(nick)) < 0) return NULL;
-    return nicks[index];
+    return nicks.list.nicks[index];
   }
   return NULL;
 }
@@ -442,14 +438,14 @@ const char *nicks_getnick(const char *numeric)
 {
   long index;
   if ((index = nicks_search_numeric(numeric)) < 0) return NULL;
-  return nicks_num[index]->nick;
+  return nicks_num.list.nicks[index]->nick;
 }
 
 const char *nicks_getnum(const char *nick)
 {
   long index;
   if ((index = nicks_search_nick(nick)) < 0) return NULL;
-  return nicks[index]->numeric;
+  return nicks.list.nicks[index]->numeric;
 }
 
 /********************************************************************
@@ -462,7 +458,7 @@ const char *nicks_getnum(const char *nick)
 ********************************************************************/
 long nicks_getcount(void)
 {
-  return nicks_count;
+  return nicks.size;
 }
 
 /********************************************************************
@@ -473,8 +469,8 @@ long nicks_getcount(void)
 void dbase_clear(void)
 {
   debug_out(" | |==> Cleaning Nick database...\n");
-  while (nicks_count)
-    nicks_remove(nicks_num[nicks_count-1]->numeric);
+  while (nicks_num.size)
+    nicks_remove(nicks_num.list.nicks[nicks_num.size-1]->numeric);
   channels_cleanup();
   chanserv_dbase_cleanup();
   debug_out(" | \\==> Databases successfully removed from memory...\n");

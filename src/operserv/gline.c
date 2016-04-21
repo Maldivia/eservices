@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: gline.c,v 1.3 2003/03/01 16:47:11 cure Exp $ */
+/* $Id: gline.c,v 1.5 2004/08/05 00:02:33 mr Exp $ */
 
 #include <string.h>
 
@@ -30,7 +30,9 @@
 
 extern sock_info *irc;
 
-#define OPERSERV_GLINE_ADDED      "Gline added for %s expiring in %lu seconds."
+#define OPERSERV_GLINE_ADDED      "Gline added for %s expiring in %s."
+#define OPERSERV_GLINE_CHAN_ADDED "Gline added for %s expiring in %s (%d nicks glined, %d ignored)."
+#define OPERSERV_GLINE_NO_OPER    "You cannot specify an oper as nickname for GLINE."
 
 /**************************************************************************************************
  * operserv_gline
@@ -58,18 +60,82 @@ FUNC_COMMAND(operserv_gline)
   if (!operserv_have_access(from->nickserv->flags, command_info->flags)) return ERROR_NO_ACCESS;
 
   if (!reason) return com_message(sock, conf->os->numeric, from->numeric, format, command_info->syntax);
+  
   durance = time_string_to_int(secs);
   if (durance < 1) return com_message(sock, conf->os->numeric, from->numeric, format, command_info->syntax);
-  if (!operserv_valid_gline(userhost)) return com_message(sock, conf->os->numeric, from->numeric, format, OPERSERV_INVALID_GLINE);
+  if (!operserv_have_access(from->nickserv->flags, BITS_OPERSERV_SERVICES_SUB_ADMIN))
+    if (durance > 3600) durance = 3600; /* Max 1 hour for non-admins */
+
+  if (userhost[0] == '#')
+  {
+    int i;
+    int glined = 0, ignored = 0;
+
+    dbase_channels *chan = channels_getinfo(-1, userhost);
+    if (!chan)
+      return com_message(sock, conf->os->numeric, from->numeric, format, OPERSERV_INVALID_GLINE);
+
+    for (i = 0; i < chan->usercount; i++)
+    {
+      dbase_nicks *ns = chan->users[i]->nick;
+
+      if (ns->nickserv)
+      {
+        if (ns->nickserv->flags & BITS_NICKSERV_OPER)
+        {
+          ignored++;
+          continue; /* Skipping opers */
+        }
+      }
+
+      if (isbiton(ns->modes, 'o'-'a'))
+      {
+        ignored++;
+        continue; /* Skipping opers */
+      }
+      
+      strcpy(buf, "*@");
+      strcat(buf, ns->host);        
+      
+      com_send(irc, "%s GL * +%s %d :%s\n", conf->numeric, buf, durance, reason);
+      glined++;
+    }
+    com_wallops(conf->os->numeric, "%s (%s!%s@%s) has issued a G:Line for %s lasting %s, reason: %s\n", from->nickserv->nick, from->nick, from->username, from->host, userhost, format_time((time_t)durance), reason);
+  
+    strcpy(buf, queue_escape_string(userhost));
+    log_command(LOG_OPERSERV, from, "GLINE", "%s %s %s", buf, secs, queue_escape_string(reason));
+      
+    return com_message(sock, conf->os->numeric, from->numeric, format, OPERSERV_GLINE_CHAN_ADDED, userhost, format_time((time_t)durance), glined, ignored);
+  }
+  else if (!operserv_valid_gline(userhost))
+  {
+    dbase_nicks *ns;
+    
+    if ((ns = nicks_getinfo(NULL, userhost, -1)))
+    {
+      if (ns->nickserv)
+        if (ns->nickserv->flags & BITS_NICKSERV_OPER)
+          return com_message(sock, conf->os->numeric, from->numeric, format, OPERSERV_GLINE_NO_OPER);
+
+      if (isbiton(ns->modes, 'o'-'a'))
+        return com_message(sock, conf->os->numeric, from->numeric, format, OPERSERV_GLINE_NO_OPER);
+
+      userhost = buf;
+      strcpy(userhost, "*@");
+      strcat(userhost, ns->host);        
+    }
+    else    
+      return com_message(sock, conf->os->numeric, from->numeric, format, OPERSERV_INVALID_GLINE);
+  }
     
   if (!operserv_have_access(from->nickserv->flags, BITS_OPERSERV_SERVICES_SUB_ADMIN))
     if (durance > 3600) durance = 3600; /* Max 1 hour for non-admins */
 
   com_send(irc, "%s GL * +%s %d :%s\n", conf->numeric, userhost, durance, reason);
-  com_wallops(conf->os->numeric, "%s (%s!%s@%s) has issued a G:Line for %s lasting %lu seconds, reason: %s\n", from->nickserv->nick, from->nick, from->username, from->host, userhost, durance, reason);
+  com_wallops(conf->os->numeric, "%s (%s!%s@%s) has issued a G:Line for %s lasting %s, reason: %s\n", from->nickserv->nick, from->nick, from->username, from->host, userhost, format_time((time_t)durance), reason);
       
   strcpy(buf, queue_escape_string(userhost));
   log_command(LOG_OPERSERV, from, "GLINE", "%s %s %s", buf, secs, queue_escape_string(reason));
       
-  return com_message(sock, conf->os->numeric, from->numeric, format, OPERSERV_GLINE_ADDED, userhost, durance);
+  return com_message(sock, conf->os->numeric, from->numeric, format, OPERSERV_GLINE_ADDED, userhost, format_time((time_t)durance));
 }

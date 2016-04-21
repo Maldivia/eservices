@@ -20,13 +20,12 @@
 /* $Id: register.c,v 1.4 2003/03/01 16:47:08 cure Exp $ */
 
 #include <string.h>
-
+#include <stdio.h>
 #include "nickserv.h"
 #include "misc_func.h"
 #include "config.h"
 #include "queue.h"
 #include "log.h"
-
 #define NICKSERV_REGISTER_REGISTERED        "This nickname is already registered."
 #define NICKSERV_REGISTER_EMAIL_EXIST       "A nickname has already been registered with this email-address."
 #define NICKSERV_REGISTER_OK                "Congratulations, you have just registered the nickname: %s\n"\

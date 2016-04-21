@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: op.c,v 1.3 2003/03/01 16:47:04 cure Exp $ */
+/* $Id: op.c,v 1.4 2003/05/28 19:15:36 mr Exp $ */
 
 #include <stdio.h>
 #include <string.h>
@@ -82,8 +82,12 @@ FUNC_COMMAND(chanserv_op)
       {
         if (!(mode & 2))
         {
-          snprintf(buf, BUFFER_SIZE, "%s %s", buf, num);
-          snprintf(bufn, BUFFER_SIZE, "%s %s", bufn, nick);
+          strncat(buf, " ", BUFFER_SIZE);
+          strncat(buf, num, BUFFER_SIZE);
+
+          strncat(bufn, " ", BUFFER_SIZE);
+          strncat(bufn, nick, BUFFER_SIZE);
+
           channels_usermode(-1, chan, "+o", num);
           bufc[count++] = 'o';
         }

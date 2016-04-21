@@ -1,7 +1,7 @@
 /****************************************************************************
 * Exiled.net IRC Services                                                   *
-* Copyright (C) 2002  Michael Rasmussen <the_real@nerdheaven.dk>            *
-*                     Morten Post <cure@nerdheaven.dk>                      *
+* Copyright (C) 2002-2003  Michael Rasmussen <the_real@nerdheaven.dk>       *
+*                          Morten Post <cure@nerdheaven.dk>                 *
 *                                                                           *
 * This program is free software; you can redistribute it and/or modify      *
 * it under the terms of the GNU General Public License as published by      *
@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: parser.h,v 1.3 2003/01/16 21:49:26 mr Exp $ */
+/* $Id: parser.h,v 1.5 2003/10/19 22:21:38 mr Exp $ */
 
 #ifndef INC_PARSERS_H
 #define INC_PARSERS_H
@@ -26,8 +26,8 @@
 #include "server.h"
 
 typedef struct parser_command_data parser_command_data;
-typedef int (*parser_p10_function)(sock_info *sock, char *from, char **params);
-typedef int (*parser_command_function)(sock_info *sock, dbase_nicks *from, char **params, char *format, parser_command_data *command_info);
+typedef int (*parser_p10_function)(sock_info *sock, const char *from, char **params);
+typedef int (*parser_command_function)(sock_info *sock, dbase_nicks *from, char **params, const char *format, parser_command_data *command_info);
 
 struct parser_p10_data
 {
@@ -44,12 +44,12 @@ struct parser_command_data
   char                    *syntax;
 };
 
-#define FUNC_COMMAND(func) int func(sock_info *sock, dbase_nicks *from, char **params, char *format, parser_command_data *command_info)
+#define FUNC_COMMAND(func) int func(sock_info *sock, dbase_nicks *from, char **params, const char *format, parser_command_data *command_info)
 
 int parser_p10(sock_info *sock, char *str);
-int parser_commands(sock_info *sock, char *to, char **params, char *from, char *format);
-int parser_ctcp(sock_info *sock, char *to, char **params, dbase_nicks *from);
+int parser_commands(sock_info *sock, const char *to, char **params, const char *from, const char *format);
+int parser_ctcp(sock_info *sock, const char *to, char **params, dbase_nicks *from);
 int parser_dcc(sock_info *sock, char *str);
-int parser_check_ignore(dbase_nicks *nick, char *to, char *format);
+int parser_check_ignore(dbase_nicks *nick, const char *to, const char *format);
 void parser_remove_ignore(void *ptr);
 #endif /* INC_PARSERS_H */

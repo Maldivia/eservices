@@ -1,7 +1,7 @@
 /****************************************************************************
 * Exiled.net IRC Services                                                   *
-* Copyright (C) 2002  Michael Rasmussen <the_real@nerdheaven.dk>            *
-*                     Morten Post <cure@nerdheaven.dk>                      *
+* Copyright (C) 2002-2003  Michael Rasmussen <the_real@nerdheaven.dk>       *
+*                          Morten Post <cure@nerdheaven.dk>                 *
 *                                                                           *
 * This program is free software; you can redistribute it and/or modify      *
 * it under the terms of the GNU General Public License as published by      *
@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: chanserv.h,v 1.14 2003/02/25 23:49:50 mr Exp $ */
+/* $Id: chanserv.h,v 1.18 2004/03/19 21:50:36 mr Exp $ */
 
 #ifndef INC_CHANSERV_H
 #define INC_CHANSERV_H
@@ -25,7 +25,7 @@
 #include "parser.h"
 
 /* The time (in seconds) the should have passed since lastlogin for an account to expire */
-#define CHANSERV_EXPIRE_TIME    (30 * 24 * 60 * 60)
+#define CHANSERV_EXPIRE_TIME    (180 * 24 * 60 * 60)
 /* How often should we check for expired nicks (in seconds) */
 #define CHANSERV_EXPIRE_CHECK   (24 * 60 * 60)
 
@@ -51,6 +51,7 @@
 #define CHANSERV_LEVEL_CLEARMODES 450
 #define CHANSERV_LEVEL_CYCLE      450
 #define CHANSERV_LEVEL_STATUS     450
+#define CHANSERV_LEVEL_SET        450
 #define CHANSERV_LEVEL_CLEAR      500
 #define CHANSERV_LEVEL_CHOWNER    500
 #define CHANSERV_LEVEL_DROP       500
@@ -82,11 +83,12 @@
 #define CHANSERV_SYNTAX_BAN               "Syntax: BAN <#channel> <banmask> [duration]"
 #define CHANSERV_SYNTAX_UNBAN             "Syntax: UNBAN <#channel> <id>"
 
-#define CHANSERV_SYNTAX_ACCESS            "Syntax: ACCESS <#channel> <SET|REM|LIST> <registered nickname> [<level>|<registered nickname>]"
+#define CHANSERV_SYNTAX_ACCESS            "Syntax: ACCESS <#channel> <SET|REM|LIST> <registered nickname> [level]"
 #define CHANSERV_SYNTAX_AUTOOP            "Syntax: AUTOOP <#channel> <registered nickname>"
 
 #define CHANSERV_SYNTAX_CLEARMODES        "Syntax: CLEARMODES <#channel>"
 #define CHANSERV_SYNTAX_CYCLE             "Syntax: CYCLE <#channel>"
+#define CHANSERV_SYNTAX_SET               "Syntax: SET <#channel> <option> <ON|OFF|mode>"
 
 #define CHANSERV_SYNTAX_DROP              "Syntax: DROP <#channel> <password>"
 #define CHANSERV_SYNTAX_CHOWNER           "Syntax: CHOWNER <#channel> <registered nickname> <password>"
@@ -96,7 +98,7 @@
 #define CHANSERV_SYNTAX_CHOWNER_ADMIN     "Syntax: CHOWNER <#channel> <registered nickname> FORCE"
 #define CHANSERV_SYNTAX_COMMENT           "Syntax: COMMENT <#channel> <ADD|REM|LIST> [comment|id]"
 #define CHANSERV_SYNTAX_DISABLE           "Syntax: DISABLE <#channel>"
-#define CHANSERV_SYNTAX_GREP              "Syntax: GREP <chan|user> <mask>"
+#define CHANSERV_SYNTAX_GREP              "Syntax: GREP <type> <mask>"
 #define CHANSERV_SYNTAX_ENABLE            "Syntax: ENABLE <#channel>"
 #define CHANSERV_SYNTAX_NOEXPIRE          "Syntax: NOEXPIRE <#channel>"
 
@@ -133,6 +135,7 @@ FUNC_COMMAND(chanserv_kickban);
 FUNC_COMMAND(chanserv_autoop);
 FUNC_COMMAND(chanserv_cycle);
 FUNC_COMMAND(chanserv_chowner);
+FUNC_COMMAND(chanserv_set);
 
 /* Admin commands */
 FUNC_COMMAND(chanserv_lister);
@@ -174,4 +177,10 @@ void                    chanserv_dbase_remove_ban(void *ptr);
 void                    chanserv_dbase_join(chanserv_dbase_channel *chan, unsigned long burst, char *mode);
 void                    chanserv_dbase_part(chanserv_dbase_channel *chan);
 void                    chanserv_dbase_resync_channel(dbase_channels *chan);
+
+void                    chanserv_dbase_check_topic(const char *chan);
+void                    chanserv_dbase_check_ops(const char *chan, const char *nick);
+void                    chanserv_dbase_check_all(chanserv_dbase_channel *chan);
+void                    chanserv_dbase_enforce_all(void);
+
 #endif /* INC_CHANSERV_H */

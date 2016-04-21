@@ -1,4 +1,6 @@
-Syntax: ACCESS <#channel> <SET|REM|LIST> [registered nickname] [level]
+Syntax: ACCESS <#channel> SET <registered nickname> <level>
+        ACCESS <#channel> REM <registered nickname>
+        ACCESS <#channel> LIST
   
 This command is used to maintain the access list on <#channel>. Users
 with the appropriate access on <#channel> will be able to add, remove

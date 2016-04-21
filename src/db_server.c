@@ -1,7 +1,7 @@
 /****************************************************************************
 * Exiled.net IRC Services                                                   *
-* Copyright (C) 2002  Michael Rasmussen <the_real@nerdheaven.dk>            *
-*                     Morten Post <cure@nerdheaven.dk>                      *
+* Copyright (C) 2002-2003  Michael Rasmussen <the_real@nerdheaven.dk>       *
+*                          Morten Post <cure@nerdheaven.dk>                 *
 *                                                                           *
 * This program is free software; you can redistribute it and/or modify      *
 * it under the terms of the GNU General Public License as published by      *
@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: db_server.c,v 1.3 2003/02/14 18:24:12 mr Exp $ */
+/* $Id: db_server.c,v 1.5 2003/10/19 22:22:59 mr Exp $ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -40,23 +40,20 @@
 #include "help.h"
 #include "db_server.h"
 
-extern dbase_nicks **nicks_num;
-extern long          nicks_count;
+extern list_data nicks_num;
 
 dbase_server *servers = NULL;
 
-void server_add(char *from, char *numeric, char *name, unsigned long linktime, char *desc)
+void server_add(const char *from, const char *numeric, const char *name, unsigned long linktime, const char *desc)
 {
   dbase_server *ny;
   dbase_server *parent = NULL;
 
-  numeric[2] = '\0';
-
-  ny = (dbase_server*) malloc(sizeof(dbase_server));
+  ny = (dbase_server*) xmalloc(sizeof(dbase_server));
 
   if ((parent = server_find(from, servers)))
   {
-    parent->children = (dbase_server**)realloc(parent->children, sizeof(dbase_server*)*(++parent->children_count));
+    parent->children = (dbase_server**)xrealloc(parent->children, sizeof(dbase_server*)*(++parent->children_count));
     parent->children[parent->children_count -1] = ny;
   }
   else if (!from)
@@ -70,12 +67,12 @@ void server_add(char *from, char *numeric, char *name, unsigned long linktime, c
 
   ny->parent = parent;
 
-  strcpy(ny->numeric, numeric);
+  strncpy(ny->numeric, numeric, 2);
 
-  ny->name = (char *)malloc(strlen(name)+1);
+  ny->name = (char *)xmalloc(strlen(name)+1);
   strcpy(ny->name, name);
 
-  ny->desc = (char *)malloc(strlen(desc)+1);
+  ny->desc = (char *)xmalloc(strlen(desc)+1);
   strcpy(ny->desc, desc);
 
   ny->linktime = linktime;
@@ -84,12 +81,12 @@ void server_add(char *from, char *numeric, char *name, unsigned long linktime, c
   ny->children_count = 0;
 }
 
-dbase_server *server_search(char *numeric)
+dbase_server *server_search(const char *numeric)
 {
   return server_find(numeric, servers);
 }
 
-dbase_server *server_find(char *numeric, dbase_server *root)
+dbase_server *server_find(const char *numeric, dbase_server *root)
 {
   if (root)
   {
@@ -104,7 +101,7 @@ dbase_server *server_find(char *numeric, dbase_server *root)
   return NULL;
 }
 
-dbase_server *server_find_name(char *name, dbase_server *root)
+dbase_server *server_find_name(const char *name, dbase_server *root)
 {
   if (root)
   {
@@ -120,7 +117,7 @@ dbase_server *server_find_name(char *name, dbase_server *root)
 }
 
 
-void server_remove(char *name)
+void server_remove(const char *name)
 {
   dbase_server *server = servers;
 
@@ -144,11 +141,11 @@ void server_free(dbase_server *server, int top)
     server_free(server->children[i], 0);
 
   i = 0;
-  while (i < nicks_count)
+  while (i < nicks_num.size)
   {
-    if ((server->numeric[0] == nicks_num[i]->numeric[0]) && (server->numeric[1] == nicks_num[i]->numeric[1]))
+    if ((server->numeric[0] == nicks_num.list.nicks[i]->numeric[0]) && (server->numeric[1] == nicks_num.list.nicks[i]->numeric[1]))
     {
-      if (nicks_remove(nicks_num[i]->numeric) < 0) i++;
+      if (nicks_remove(nicks_num.list.nicks[i]->numeric) < 0) i++;
     }
     else i++;
   }
@@ -161,7 +158,7 @@ void server_free(dbase_server *server, int top)
         if (server->parent->children[i] == server)
         {
           server->parent->children[i] = server->parent->children[--server->parent->children_count];
-          server->parent->children = (dbase_server **) realloc(server->parent->children, sizeof(dbase_server *)*server->parent->children_count);
+          server->parent->children = (dbase_server **) xrealloc(server->parent->children, sizeof(dbase_server *)*server->parent->children_count);
           break;
         }
       }

@@ -1,12 +1,12 @@
 # Exiled.Net IRC Services.
-# $Id: configure.ac,v 1.3 2003/02/25 23:44:25 mr Exp $
+# $Id: configure.ac,v 1.5 2004/01/09 00:15:37 cure Exp $
 
 # Process this file with autoconf to produce a configure script.
 
-AC_INIT([Exiled.Net IRC Services], [x.x], [the_real@nerdheaven.dk])
+AC_INIT([Exiled.Net IRC Services], [], [maldivia@gmail.com])
 AC_CONFIG_SRCDIR([src/chanserv.c])
 AC_LANG(C)
-AM_INIT_AUTOMAKE([Exiled.Net IRC Services], [x.x])
+AM_INIT_AUTOMAKE
 
 dnl Checks for programs.
 AC_PROG_CC
@@ -36,6 +36,11 @@ AC_CHECK_HEADERS([netinet/in.h])
 # required for atexit()
 AC_CHECK_HEADERS([stdlib.h])
 
+# For systems which defines crypt() in crypt.h instead of unistd.h
+AC_CHECK_HEADERS([crypt.h])
+
+# Check for OpenSSL for use of SHA1 rutine
+AC_CHECK_HEADERS([openssl/sha.h])
 
 dnl Checks for typedefs, structures, and compiler characteristics.
 AC_C_CONST
@@ -57,12 +62,14 @@ AC_CHECK_FUNCS([strcasecmp stricmp strchr strtoul snprintf])
 dnl Check for libs
 AC_CHECK_LIB(m, floor)
 AC_CHECK_LIB(crypt, crypt)
+AC_CHECK_LIB(z, compress)
+AC_CHECK_LIB(ssl -lcrypto, SHA1)
 
 dnl Turn of debug information?
 
 AC_ARG_WITH(debug,
     AC_HELP_STRING([--with-debug],
-    [Specifies wheather debug console-output information should be suppressed]))
+    [Specifies whether debug console-output information should be suppressed]))
 
 if test "x$with_debug" = "xno"; then
   DEBUG="-DNDEBUG"
@@ -159,7 +166,7 @@ else
 fi
 
 LDFLAGS="$LDFLAGS -L$MYSQL_LIB"
-LIBS="$LIBS -lmysqlclient"
+LIBS="-lmysqlclient $LIBS"
 
 AC_SUBST(DEBUG)
 AC_SUBST(MYSQL_LIB)

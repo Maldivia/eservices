@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: chpass.c,v 1.3 2003/03/01 16:47:08 cure Exp $ */
+/* $Id: chpass.c,v 1.4 2004/01/16 15:53:20 mr Exp $ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -56,7 +56,6 @@ FUNC_COMMAND(nickserv_chpass)
 {
   nickserv_dbase_data *data;
   char buf[BUFFER_SIZE];
-  const char *p;
   char *who = getnext(params);
   char *pass = getrest(params);
 
@@ -69,14 +68,8 @@ FUNC_COMMAND(nickserv_chpass)
   /* is the nick regged */
   if (!(data = nickserv_dbase_find_nick(who))) return com_message(sock, conf->ns->numeric, from->numeric, format, NICKSERV_NOT_REGISTERED, who);
 
-  /* crypt the new password */
-  p = ircd_crypt(pass, from->host);
-  data->password = (char*)realloc(data->password, strlen(p)+1);
-  strcpy(data->password, p);
-
-  /* save it to the database */
-  snprintf(buf, BUFFER_SIZE, "UPDATE nickdata SET password='%s' WHERE nick='%s'", data->password, queue_escape_string(data->nick));
-  queue_add(buf);
+  /* Change the password */
+  nick_password_crypt(data, pass);
 
   /* log the command */
   strcpy(buf, queue_escape_string(who));

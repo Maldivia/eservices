@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: chanserv.c,v 1.23 2003/03/01 16:47:02 cure Exp $ */
+/* $Id: chanserv.c,v 1.27 2004/03/19 21:50:42 mr Exp $ */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -41,6 +41,7 @@
 #include "channels.h"
 #include "operserv.h"
 #include "timer.h"
+#include "dcc.h"
 
 /* declare the external irc socket */
 extern sock_info *irc;
@@ -105,7 +106,7 @@ int chanserv_dbase_check_access(nickserv_dbase_data *ns, chanserv_dbase_channel 
 int chanserv_dbase_access_add(chanserv_dbase_channel *chan, nickserv_dbase_data *nick, int level, int autoop, int sql)
 {
   chanserv_dbase_access *acc;
-  acc = (chanserv_dbase_access *)malloc(sizeof(chanserv_dbase_access));
+  acc = (chanserv_dbase_access *)xmalloc(sizeof(chanserv_dbase_access));
   if (!acc) return -1;
 
   acc->nick = nick;
@@ -113,9 +114,9 @@ int chanserv_dbase_access_add(chanserv_dbase_channel *chan, nickserv_dbase_data 
   acc->level = level % (CHANSERV_LEVEL_OWNER + 1);
   acc->autoop = autoop % 2;
 
-  chan->access = (chanserv_dbase_access **)realloc(chan->access, (++chan->access_count)*sizeof(chanserv_dbase_access*));
+  chan->access = (chanserv_dbase_access **)xrealloc(chan->access, (++chan->access_count)*sizeof(chanserv_dbase_access*));
   chan->access[chan->access_count-1] = acc;
-  nick->access = (chanserv_dbase_access **)realloc(nick->access, (++nick->access_count)*sizeof(chanserv_dbase_access*));
+  nick->access = (chanserv_dbase_access **)xrealloc(nick->access, (++nick->access_count)*sizeof(chanserv_dbase_access*));
   nick->access[nick->access_count-1] = acc;
 
   if (sql)
@@ -164,8 +165,8 @@ int chanserv_dbase_access_delete(chanserv_dbase_channel *chan, nickserv_dbase_da
     }
   }
 
-  chan->access = (chanserv_dbase_access **)realloc(chan->access, (--chan->access_count)*sizeof(chanserv_dbase_access*));
-  nick->access = (chanserv_dbase_access **)realloc(nick->access, (--nick->access_count)*sizeof(chanserv_dbase_access*));
+  chan->access = (chanserv_dbase_access **)xrealloc(chan->access, (--chan->access_count)*sizeof(chanserv_dbase_access*));
+  nick->access = (chanserv_dbase_access **)xrealloc(nick->access, (--nick->access_count)*sizeof(chanserv_dbase_access*));
   return 0;
 }
 
@@ -189,18 +190,18 @@ chanserv_dbase_channel *chanserv_dbase_add(char *chan, char *owner, char *topic,
   if (nr >= 0) return NULL;
 
   nr = (nr+1) * -1;
-  entry = (chanserv_dbase_channel *)malloc(sizeof(chanserv_dbase_channel));
+  entry = (chanserv_dbase_channel *)xmalloc(sizeof(chanserv_dbase_channel));
 
-  entry->name = (char *)malloc(strlen(chan)+1);
+  entry->name = (char *)xmalloc(strlen(chan)+1);
   strcpy(entry->name, chan);
 
-  entry->owner = (char *)malloc(strlen(owner)+1);
+  entry->owner = (char *)xmalloc(strlen(owner)+1);
   strcpy(entry->owner, owner);
 
-  entry->topic = (char *)malloc(strlen(topic)+1);
+  entry->topic = (char *)xmalloc(strlen(topic)+1);
   strcpy(entry->topic, topic);
 
-  entry->keepmode = (char *)malloc(strlen(mode)+1);
+  entry->keepmode = (char *)xmalloc(strlen(mode)+1);
   strcpy(entry->keepmode, mode);
 
   entry->comments = NULL;
@@ -215,7 +216,7 @@ chanserv_dbase_channel *chanserv_dbase_add(char *chan, char *owner, char *topic,
   entry->bans = NULL;
   entry->bancount = 0;
 
-  chanserv_list = (chanserv_dbase_channel**)realloc(chanserv_list, (chanserv_list_count+1) * sizeof(chanserv_dbase_channel*));
+  chanserv_list = (chanserv_dbase_channel**)xrealloc(chanserv_list, (chanserv_list_count+1) * sizeof(chanserv_dbase_channel*));
   if (nr < (chanserv_list_count++)) memmove(&chanserv_list[nr+1], &chanserv_list[nr], (chanserv_list_count - nr - 1) * sizeof(chanserv_dbase_channel*));
   chanserv_list[nr] = entry;
 
@@ -264,7 +265,7 @@ int chanserv_dbase_delete(chanserv_dbase_channel *chan)
   /* remove from the list of regged channels */
   if (i < chanserv_list_count-1)
     memmove(&chanserv_list[i], &chanserv_list[i+1], (chanserv_list_count-i-1)*sizeof(chanserv_dbase_channel*));
-  chanserv_list = (chanserv_dbase_channel**)realloc(chanserv_list, sizeof(chanserv_dbase_channel*)*(--chanserv_list_count));
+  chanserv_list = (chanserv_dbase_channel**)xrealloc(chanserv_list, sizeof(chanserv_dbase_channel*)*(--chanserv_list_count));
   
   /* free up resources */
   for (i = 0; i < chan->comment_count; i++)
@@ -296,22 +297,39 @@ int chanserv_dbase_internal_search(long low, long high, const char *chan)
   else return mid;
 }
 
+/**************************************************************************************************
+ * chanserv_dbase_burst_join
+ **************************************************************************************************
+ * This functions is called when services are connecting to the server. It makes ChanServ join
+ * all active registered channels, and add an entry in the internal channel-database.
+ **************************************************************************************************
+ * Params:
+ *   [IN] sock_info *sock    : The socket connected to the irc-server
+ **************************************************************************************************/
 void chanserv_dbase_burst_join(sock_info *sock)
 {
   int i;
   long now = time(0);
-  dbase_nicks *CS = (dbase_nicks *)malloc(sizeof(dbase_nicks));
+  dbase_nicks *CS = (dbase_nicks *)xmalloc(sizeof(dbase_nicks));
   /* Create an bogus entry in the nicks database for ChanServ.
      Make sure the nick and numeric specified is invalid, 
      ex contains spaces so it cannot be found or will return
      an error from the server if found, so users cannot make
-     E kick or change mode on itself */     
-  CS->nick = (char *)malloc(12);                    strcpy(CS->nick, "This is me");
-  CS->username = (char *)malloc(12);                strcpy(CS->username, "chanserv");
-  CS->host = (char *)malloc(strlen(conf->host)+1);  strcpy(CS->host, conf->host);
-  CS->userinfo = (char *)malloc(12);                strcpy(CS->userinfo, "ChanServ");
+     E kick or change mode on itself */
+
+  CS->nick = (char *)xmalloc(strlen(conf->cs->nick)+3);  
+  strcpy(CS->nick, conf->cs->nick);
+  strcat(CS->nick, "  "); 
+  
+  CS->username = conf->cs->username;
+  CS->host = conf->host;
+  CS->userinfo = conf->cs->userinfo;
+  
+  CS->numeric = (char *)xmalloc(6);
+  strcpy(CS->numeric, conf->numeric);
+  strcat(CS->numeric, "XxX");
+
   CS->away = NULL;
-  CS->numeric = (char *)malloc(12);                 strcpy(CS->numeric, conf->numeric); strcat(CS->numeric, "XxX");
   CS->IP = 0;
   CS->timestamp = now;
   CS->modes = 0;
@@ -323,15 +341,11 @@ void chanserv_dbase_burst_join(sock_info *sock)
   
   for (i = 0; i < chanserv_list_count; i++)
   {
-    if (chanserv_list[i]->flags & BITS_CHANSERV_DISABLED) continue;
-      
-    chanserv_dbase_join(chanserv_list[i], now, "+nt");    
+    if (!(chanserv_list[i]->flags & BITS_CHANSERV_DISABLED))
+      chanserv_dbase_join(chanserv_list[i], now, "+nt");
   }
-  /* free the CS variable */
+  /* free the malloc'ed CS variable */
   xfree(CS->nick);
-  xfree(CS->username);
-  xfree(CS->host);
-  xfree(CS->userinfo);
   xfree(CS->numeric);
   xfree(CS);
 }
@@ -369,7 +383,7 @@ void chanserv_dbase_expire(chanserv_dbase_channel *ch)
   chanserv_dbase_part(ch);
   
   if ((nick = nickserv_dbase_find_nick(ch->owner)))
-    nickserv_dbase_notice(nick, "%s has expired do to inactivity. Contact an oper for more information, or to request it reopened.", ch->name);
+    nickserv_dbase_notice(nick, "%s has expired due to inactivity. Contact an oper for more information, or to request it reopened.", ch->name);
 
   snprintf(buf, BUFFER_SIZE, "UPDATE chandata SET flags='%lu' WHERE name='%s'", ch->flags, queue_escape_string(ch->name));
   queue_add(buf);  
@@ -387,7 +401,7 @@ int chanserv_dbase_update_lastlogin(chanserv_dbase_channel *ch)
 void chanserv_dbase_check_expire(void *ptr)
 {
   int i;
-  timer_event *te = (timer_event*)malloc(sizeof(timer_event));
+  timer_event *te = (timer_event*)xmalloc(sizeof(timer_event));
   unsigned long expire = (unsigned long)time(0) - CHANSERV_EXPIRE_TIME;
   for (i = 0; i < chanserv_list_count; i++)
   {
@@ -405,13 +419,13 @@ void chanserv_dbase_check_expire(void *ptr)
 
 int chanserv_dbase_comment_add(chanserv_dbase_channel *chan, nickserv_dbase_data *nick, const char *comment, long date, int sql)
 {
-  chan->comments = (dbase_comment**)realloc(chan->comments, (++chan->comment_count)*sizeof(dbase_comment*));
-  chan->comments[chan->comment_count-1] = (dbase_comment*)malloc(sizeof(dbase_comment));
+  chan->comments = (dbase_comment**)xrealloc(chan->comments, (++chan->comment_count)*sizeof(dbase_comment*));
+  chan->comments[chan->comment_count-1] = (dbase_comment*)xmalloc(sizeof(dbase_comment));
   
-  chan->comments[chan->comment_count-1]->nick = (char*)malloc(strlen(nick->nick)+1);
+  chan->comments[chan->comment_count-1]->nick = (char*)xmalloc(strlen(nick->nick)+1);
   strcpy(chan->comments[chan->comment_count-1]->nick, nick->nick);
   
-  chan->comments[chan->comment_count-1]->comment = (char*)malloc(strlen(comment)+1);
+  chan->comments[chan->comment_count-1]->comment = (char*)xmalloc(strlen(comment)+1);
   strcpy(chan->comments[chan->comment_count-1]->comment, comment);
   
   chan->comments[chan->comment_count-1]->date = date;
@@ -439,7 +453,7 @@ int chanserv_dbase_comment_del(chanserv_dbase_channel *chan, unsigned long nr, i
   comment = chan->comments[nr];
     
   memmove(&chan->comments[nr], &chan->comments[nr+1], (chan->comment_count - nr - 1)*(sizeof(dbase_comment*)));
-  chan->comments = (dbase_comment**)realloc(chan->comments, (--chan->comment_count)*sizeof(dbase_comment*));
+  chan->comments = (dbase_comment**)xrealloc(chan->comments, (--chan->comment_count)*sizeof(dbase_comment*));
   
   if (sql)
   {
@@ -473,7 +487,7 @@ void chanserv_dbase_remove_enforce_ban(chanserv_dbase_channel *ch, int nr, int n
   xfree(ch->bans[nr]);
   
   ch->bans[nr] = ch->bans[ch->bancount-1];
-  ch->bans = (chanserv_dbase_bans**)realloc(ch->bans, sizeof(chanserv_dbase_bans*)*(--ch->bancount));
+  ch->bans = (chanserv_dbase_bans**)xrealloc(ch->bans, sizeof(chanserv_dbase_bans*)*(--ch->bancount));
 }
 
 void chanserv_dbase_remove_covered(chanserv_dbase_channel *ch, const char *banmask)
@@ -519,9 +533,9 @@ int chanserv_dbase_add_enforce_ban(chanserv_dbase_channel *ch, const char *banma
 {
   unsigned long id;
   chanserv_dbase_bans *ban;
-  timer_event *te = (timer_event*)malloc(sizeof(timer_event));
+  timer_event *te = (timer_event*)xmalloc(sizeof(timer_event));
     
-  te->data = malloc(strlen(banmask)+strlen(ch->name)+2);
+  te->data = xmalloc(strlen(banmask)+strlen(ch->name)+2);
   strcpy((char*)te->data, ch->name);
   strcat((char*)te->data, " ");
   strcat((char*)te->data, banmask);
@@ -531,18 +545,18 @@ int chanserv_dbase_add_enforce_ban(chanserv_dbase_channel *ch, const char *banma
   
   id = timer_add(te, period);
   
-  ban = (chanserv_dbase_bans*)malloc(sizeof(chanserv_dbase_bans));
+  ban = (chanserv_dbase_bans*)xmalloc(sizeof(chanserv_dbase_bans));
 
-  ban->mask = (char*)malloc(strlen(banmask)+1);
+  ban->mask = (char*)xmalloc(strlen(banmask)+1);
   strcpy(ban->mask, banmask);
   
-  ban->nick = (char*)malloc(strlen(nick)+1);
+  ban->nick = (char*)xmalloc(strlen(nick)+1);
   strcpy(ban->nick, nick);
   
   ban->expire = id;  
   chanserv_dbase_remove_covered(ch, banmask);
   
-  ch->bans = (chanserv_dbase_bans**)realloc(ch->bans, sizeof(chanserv_dbase_bans)*(++ch->bancount));
+  ch->bans = (chanserv_dbase_bans**)xrealloc(ch->bans, sizeof(chanserv_dbase_bans)*(++ch->bancount));
   ch->bans[ch->bancount-1] = ban;
   
   if (sql)
@@ -683,9 +697,9 @@ void chanserv_dbase_resync_channel(dbase_channels *chan)
   nums[0] = 0;
 
   /* create the root of the string chain */
-  root = (string_chain*)malloc(sizeof(string_chain));
+  root = (string_chain*)xmalloc(sizeof(string_chain));
   root->next = NULL;
-  root->str = (char*)malloc(BUFFER_SIZE);
+  root->str = (char*)xmalloc(BUFFER_SIZE);
   
   chain = root;
   
@@ -697,18 +711,18 @@ void chanserv_dbase_resync_channel(dbase_channels *chan)
     snprintf(chain->str, BUFFER_SIZE, "%s J %s\n", conf->cs->numeric, chan->name);
     
     /* attach a new field to the chain */
-    chain->next = (string_chain*)malloc(sizeof(string_chain));
+    chain->next = (string_chain*)xmalloc(sizeof(string_chain));
     chain = chain->next;
-    chain->str = (char*)malloc(BUFFER_SIZE);
+    chain->str = (char*)xmalloc(BUFFER_SIZE);
     chain->next = NULL;
   }
   
   /* Give ChanServ op again */
   snprintf(chain->str, BUFFER_SIZE, "%s M %s +o %s\n", conf->numeric, chan->name, conf->cs->numeric);
   /* add a new field to the chain */
-  chain->next = (string_chain*)malloc(sizeof(string_chain));
+  chain->next = (string_chain*)xmalloc(sizeof(string_chain));
   chain = chain->next;
-  chain->str = (char*)malloc(BUFFER_SIZE);
+  chain->str = (char*)xmalloc(BUFFER_SIZE);
   chain->next = NULL;
 
   /* loop through all users on the channel */
@@ -721,9 +735,9 @@ void chanserv_dbase_resync_channel(dbase_channels *chan)
       if (m >= 5)
       {
         snprintf(chain->str, BUFFER_SIZE, "%s M %s +%s%s\n", conf->cs->numeric, chan->name, modes, nums);
-        chain->next = (string_chain*)malloc(sizeof(string_chain));
+        chain->next = (string_chain*)xmalloc(sizeof(string_chain));
         chain = chain->next;
-        chain->str = (char*)malloc(BUFFER_SIZE);
+        chain->str = (char*)xmalloc(BUFFER_SIZE);
         chain->next = NULL;
         modes[0] = 0;
         nums[0] = 0;
@@ -754,10 +768,10 @@ void chanserv_dbase_resync_channel(dbase_channels *chan)
   /* not a regged channel, make chanserv leave afterwards */
   if (!chan->chanserv)
   {
-    chain->next = (string_chain*)malloc(sizeof(string_chain));
+    chain->next = (string_chain*)xmalloc(sizeof(string_chain));
     chain = chain->next;
-    chain->str = (char*)malloc(BUFFER_SIZE);
-    snprintf(chain->str, BUFFER_SIZE, "%s P %s\n", conf->cs->numeric, chan->name);
+    chain->str = (char*)xmalloc(BUFFER_SIZE);
+    snprintf(chain->str, BUFFER_SIZE, "%s L %s\n", conf->cs->numeric, chan->name);
     chain->next = NULL;
   }
   
@@ -766,7 +780,7 @@ void chanserv_dbase_resync_channel(dbase_channels *chan)
   {
     timer_event *t;
     /* yes there are, create a timer to execute right after EB */
-    t = (timer_event*)malloc(sizeof(timer_event));
+    t = (timer_event*)xmalloc(sizeof(timer_event));
     t->data = (void*)root;
     t->func = string_chain_traverse;
     t->free = string_chain_free;
@@ -776,3 +790,146 @@ void chanserv_dbase_resync_channel(dbase_channels *chan)
     string_chain_free(root);
 }
 
+/**************************************************************************************************
+ * chanserv_dbase_check_topic
+ **************************************************************************************************
+ *   Check if the channes has strict topic activated, and sets the topic to the strict value.
+ **************************************************************************************************
+ * Params:
+ *   [IN] char *chan  : The channel to check
+ **************************************************************************************************/
+void chanserv_dbase_check_topic(const char *chan)
+{
+  chanserv_dbase_channel *ch;
+  
+  if (!(ch = chanserv_dbase_find_chan(chan)))
+    return; /* Channel not regged, no need to check further */
+  
+    if (ch->flags & BITS_CHANSERV_DISABLED)
+    return; /* Channel disabled, no need to check further */
+
+  
+  if (!(ch->flags & BITS_CHANSERV_STRICTTOPIC))
+    return; /* Strict Topic not set, no need to check further */
+
+  com_send(irc, "%s T %s :%s\n", conf->cs->numeric, chan, ch->topic);
+  channels_settopic(-1, chan, ch->topic);
+
+  dcc_console_text('t', "[%s!%s@%s] sets topic on %s: %s", conf->cs->nick, conf->cs->username, conf->host, chan, ch->topic);
+}
+
+/**************************************************************************************************
+ * chanserv_dbase_check_ops
+ **************************************************************************************************
+ *   Check if nick has access in channel chan, and deops him if not
+ **************************************************************************************************
+ * Params:
+ *   [IN] char *chan  : The channel to check
+ **************************************************************************************************/
+void chanserv_dbase_check_ops(const char *chan, const char *nick)
+{
+  dbase_nicks *ns;
+  chanserv_dbase_channel *ch = chanserv_dbase_find_chan(chan);
+  
+  if (!ch)
+    return; /* Not regged, no need to check further */
+    
+  if (ch->flags & BITS_CHANSERV_DISABLED)
+    return; /* Channel disabled, no need to check further */
+    
+  if (!(ch->flags & BITS_CHANSERV_STRICTOPS))
+    return; /* StrictOps not set, no need to check further */
+  
+  ns = nicks_getinfo(NULL, nick, -1);
+  
+  if (!ns)
+    return; /* Database inconsistency */
+    
+  if (ns->nickserv)
+    if (chanserv_dbase_find_access(ns->nickserv, ch))
+      return; /* has access onthe channel */
+
+  com_send(irc, "%s M %s -o %s\n", conf->cs->numeric, chan, ns->numeric);
+}
+
+/**************************************************************************************************
+ * chanserv_dbase_check_all
+ **************************************************************************************************
+ *   Check all strict modes on the specified channel, and enforces them.
+ **************************************************************************************************
+ * Params:
+ *   [IN] chanserv_dbase_channel *chan  : The channel to check
+ **************************************************************************************************/
+void chanserv_dbase_check_all(chanserv_dbase_channel *chan)
+{
+  if (chan->flags & BITS_CHANSERV_DISABLED)
+    return; /* Channel disabled, no need to check further */
+  
+  if (chan->flags & BITS_CHANSERV_STRICTTOPIC)
+  {
+    com_send(irc, "%s T %s :%s\n", conf->cs->numeric, chan->name, chan->topic);
+    channels_settopic(-1, chan->name, chan->topic);
+  }
+  
+  if (chan->flags & BITS_CHANSERV_STRICTOPS)
+  {
+    char buf[100], bufmode[10];
+    int count = 0, i;
+    dbase_channels *db;
+    
+    db = channels_getinfo(-1, chan->name);
+    
+    memset(buf, 0, 100);
+    memset(bufmode, 0, 10);
+    
+    /* loop all users on the channel */
+    for (i = 0; i < db->usercount; i++)
+    {
+      /* is this Chanserv ? */
+      if (strncmp(db->users[i]->nick->numeric, conf->numeric, 2) == 0)
+        continue;
+        
+      /* is the user opped */
+      if (db->users[i]->mode & 2)
+      {
+        /* is the user authed */
+        if (db->users[i]->nick->nickserv)
+        {
+          /* does the user have access on this channel */
+          if (chanserv_dbase_has_access(db->users[i]->nick->nickserv->nick, chan))
+            continue;
+        }
+            
+        /* the user is not authed, or does not have access, deop */
+        strcat(buf, db->users[i]->nick->numeric);
+        strcat(buf, " ");
+        bufmode[count++] = 'o';
+        channels_usermode(-1, chan->name, "-o", db->users[i]->nick->numeric);
+      }
+          
+      /* only deop 6 persons pr line */
+      if (count >= 6)
+      {
+        com_send(irc, "%s M %s -%s %s\n", conf->cs->numeric, chan->name, bufmode, buf);
+        memset(buf, 0, 100);
+        memset(bufmode, 0, 10);
+        count = 0;
+      }
+    }
+
+    if (count)
+      com_send(irc, "%s M %s -%s %s\n", conf->cs->numeric, chan->name, bufmode, buf);
+  }
+}
+
+/**************************************************************************************************
+ * chanserv_dbase_enforce_all
+ **************************************************************************************************
+ *   Loops through every regged channel, enforcing strict modes.
+ **************************************************************************************************/
+void chanserv_dbase_enforce_all(void)
+{
+  int i;
+  for (i = 0; i < chanserv_list_count; i++)
+    chanserv_dbase_check_all(chanserv_list[i]);
+}

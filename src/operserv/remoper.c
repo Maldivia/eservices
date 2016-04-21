@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: remoper.c,v 1.3 2003/03/01 16:47:11 cure Exp $ */
+/* $Id: remoper.c,v 1.4 2004/01/09 03:42:59 cure Exp $ */
 
 #include <stdio.h>
 #include <string.h>
@@ -30,7 +30,8 @@
 #include "errors.h"
 #include "queue.h"
 
-#define OPERSERV_REMOPER_OK       "Oper access succesfully removed from user: %s"
+#define OPERSERV_REMOPER_OK           "Oper access succesfully removed from user: %s"
+#define OPERSERV_USER_HIGHER_ACCESS   "User has higher access then you, remoper failed."
 
 /**************************************************************************************************
  * operserv_remoper
@@ -60,6 +61,9 @@ FUNC_COMMAND(operserv_remoper)
     
   if (!(ns = nickserv_dbase_find_nick(nick))) 
     return com_message(sock, conf->os->numeric, from->numeric, format, OPERSERV_USER_NOT_FOUND);
+
+  if (!operserv_have_access(from->nickserv->flags, ns->flags)) 
+    return com_message(sock, conf->os->numeric, from->numeric, format, OPERSERV_USER_HIGHER_ACCESS);
   
   ns->flags &= 0x0000fffe;
   

@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: operlist.c,v 1.2 2003/02/25 23:15:04 cure Exp $ */
+/* $Id: operlist.c,v 1.3 2004/01/09 03:42:59 cure Exp $ */
 
 #include "operserv.h"
 #include "misc_func.h"
@@ -59,7 +59,7 @@ FUNC_COMMAND(operserv_operlist)
     if ((nickserv_list[i]->flags & BITS_NICKSERV_OPER))
     {
       char access[BUFFER_SIZE];
-      com_message(sock, conf->os->numeric, from->numeric, format, "  %-9s %-11s %s", nickserv_list[i]->nick, (nickserv_list[i]->entry?"Online":"Offline"), operserv_flags_to_title(nickserv_list[i]->flags, access));
+      com_message(sock, conf->os->numeric, from->numeric, format, "  %-9s %-11s %s %s", nickserv_list[i]->nick, (nickserv_list[i]->entry?"Online":"Offline"), operserv_flags_to_title(nickserv_list[i]->flags, access), (nickserv_list[i]->flags & BITS_OPERSERV_DCC)?"(DCC)":"");
       no++;
     }
   }

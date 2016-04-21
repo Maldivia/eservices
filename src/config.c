@@ -1,7 +1,7 @@
 /****************************************************************************
 * Exiled.net IRC Services                                                   *
-* Copyright (C) 2002  Michael Rasmussen <the_real@nerdheaven.dk>            *
-*                     Morten Post <cure@nerdheaven.dk>                      *
+* Copyright (C) 2002-2003  Michael Rasmussen <the_real@nerdheaven.dk>       *
+*                          Morten Post <cure@nerdheaven.dk>                 *
 *                                                                           *
 * This program is free software; you can redistribute it and/or modify      *
 * it under the terms of the GNU General Public License as published by      *
@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: config.c,v 1.2 2003/01/19 02:15:40 mr Exp $ */
+/* $Id: config.c,v 1.3 2003/04/15 20:41:17 cure Exp $ */
 
 #include <errno.h>
 #include <stdio.h>
@@ -45,15 +45,15 @@ int conf_load(void)
     return 1;
   }
 
-  conf = (config *) malloc(sizeof(config));
+  conf = (config *) xmalloc(sizeof(config));
 
   memset(conf, 0, sizeof(config));
 
-  conf->ns = (services *) malloc(sizeof(services));
-  conf->cs = (services *) malloc(sizeof(services));
-  conf->os = (services *) malloc(sizeof(services));
-  conf->ms = (services *) malloc(sizeof(services));
-  conf->mysql = (conf_mysql *) malloc(sizeof(conf_mysql));
+  conf->ns = (services *) xmalloc(sizeof(services));
+  conf->cs = (services *) xmalloc(sizeof(services));
+  conf->os = (services *) xmalloc(sizeof(services));
+  conf->ms = (services *) xmalloc(sizeof(services));
+  conf->mysql = (conf_mysql *) xmalloc(sizeof(conf_mysql));
 
   memset(conf->ns, 0, sizeof(services));
   memset(conf->cs, 0, sizeof(services));
@@ -77,7 +77,7 @@ int conf_load(void)
 
     if (!strcasecmp(p, "UPLINK"))
     {
-      conf->uplink = (char*)malloc(sizeof(char)*(strlen(ptr)+1));
+      conf->uplink = (char*)xmalloc(sizeof(char)*(strlen(ptr)+1));
       strcpy(conf->uplink, ptr);
     }
     else if (!strcasecmp(p, "PORT"))
@@ -86,17 +86,17 @@ int conf_load(void)
     }
     else if (!strcasecmp(p, "HOST"))
     {
-      conf->host = (char*)realloc(conf->host, sizeof(char)*(strlen(ptr)+1));
+      conf->host = (char*)xrealloc(conf->host, sizeof(char)*(strlen(ptr)+1));
       strcpy(conf->host, ptr);
     }
     else if (!strcasecmp(p, "BIND"))
     {
-      conf->bind = (char*)realloc(conf->bind, sizeof(char)*(strlen(ptr)+1));
+      conf->bind = (char*)xrealloc(conf->bind, sizeof(char)*(strlen(ptr)+1));
       strcpy(conf->bind, ptr);
     }
     else if (!strcasecmp(p, "PASS"))
     {
-      conf->pass = (char*)realloc(conf->pass, sizeof(char)*(strlen(ptr)+1));
+      conf->pass = (char*)xrealloc(conf->pass, sizeof(char)*(strlen(ptr)+1));
       strcpy(conf->pass, ptr);
     }
     else if (!strcasecmp(p, "NUMERIC"))
@@ -106,7 +106,7 @@ int conf_load(void)
 
     else if (!strcasecmp(p, "LOGFILE"))
     {
-      conf->logfile = (char*)realloc(conf->logfile, sizeof(char)*(strlen(ptr)+1));
+      conf->logfile = (char*)xrealloc(conf->logfile, sizeof(char)*(strlen(ptr)+1));
       strcpy(conf->logfile, ptr);
     }
 
@@ -114,17 +114,17 @@ int conf_load(void)
 
     else if (!strcasecmp(p, "NICKSERV_NICK"))
     {
-      conf->ns->nick = (char*)realloc(conf->ns->nick, sizeof(char)*(strlen(ptr)+1));
+      conf->ns->nick = (char*)xrealloc(conf->ns->nick, sizeof(char)*(strlen(ptr)+1));
       strcpy(conf->ns->nick, ptr);
     }
     else if (!strcasecmp(p, "NICKSERV_USERNAME"))
     {
-      conf->ns->username = (char*)realloc(conf->ns->username, sizeof(char)*(strlen(ptr)+1));
+      conf->ns->username = (char*)xrealloc(conf->ns->username, sizeof(char)*(strlen(ptr)+1));
       strcpy(conf->ns->username, ptr);
     }
     else if (!strcasecmp(p, "NICKSERV_USERINFO"))
     {
-      conf->ns->userinfo = (char*)realloc(conf->ns->userinfo, sizeof(char)*(strlen(ptr)+1));
+      conf->ns->userinfo = (char*)xrealloc(conf->ns->userinfo, sizeof(char)*(strlen(ptr)+1));
       strcpy(conf->ns->userinfo, ptr);
     }
 
@@ -132,17 +132,17 @@ int conf_load(void)
 
     else if (!strcasecmp(p, "CHANSERV_NICK"))
     {
-      conf->cs->nick = (char*)realloc(conf->cs->nick, sizeof(char)*(strlen(ptr)+1));
+      conf->cs->nick = (char*)xrealloc(conf->cs->nick, sizeof(char)*(strlen(ptr)+1));
       strcpy(conf->cs->nick, ptr);
     }
     else if (!strcasecmp(p, "CHANSERV_USERNAME"))
     {
-      conf->cs->username = (char*)realloc(conf->cs->username, sizeof(char)*(strlen(ptr)+1));
+      conf->cs->username = (char*)xrealloc(conf->cs->username, sizeof(char)*(strlen(ptr)+1));
       strcpy(conf->cs->username, ptr);
     }
     else if (!strcasecmp(p, "CHANSERV_USERINFO"))
     {
-      conf->cs->userinfo = (char*)realloc(conf->cs->userinfo, sizeof(char)*(strlen(ptr)+1));
+      conf->cs->userinfo = (char*)xrealloc(conf->cs->userinfo, sizeof(char)*(strlen(ptr)+1));
       strcpy(conf->cs->userinfo, ptr);
     }
 
@@ -150,17 +150,17 @@ int conf_load(void)
 
     else if (!strcasecmp(p, "OPERSERV_NICK"))
     {
-      conf->os->nick = (char*)realloc(conf->os->nick, sizeof(char)*(strlen(ptr)+1));
+      conf->os->nick = (char*)xrealloc(conf->os->nick, sizeof(char)*(strlen(ptr)+1));
       strcpy(conf->os->nick, ptr);
     }
     else if (!strcasecmp(p, "OPERSERV_USERNAME"))
     {
-      conf->os->username = (char*)realloc(conf->os->username, sizeof(char)*(strlen(ptr)+1));
+      conf->os->username = (char*)xrealloc(conf->os->username, sizeof(char)*(strlen(ptr)+1));
       strcpy(conf->os->username, ptr);
     }
     else if (!strcasecmp(p, "OPERSERV_USERINFO"))
     {
-      conf->os->userinfo = (char*)realloc(conf->os->userinfo, sizeof(char)*(strlen(ptr)+1));
+      conf->os->userinfo = (char*)xrealloc(conf->os->userinfo, sizeof(char)*(strlen(ptr)+1));
       strcpy(conf->os->userinfo, ptr);
     }
 
@@ -168,17 +168,17 @@ int conf_load(void)
 
     else if (!strcasecmp(p, "MULTISERV_NICK"))
     {
-      conf->ms->nick = (char*)realloc(conf->ms->nick, sizeof(char)*(strlen(ptr)+1));
+      conf->ms->nick = (char*)xrealloc(conf->ms->nick, sizeof(char)*(strlen(ptr)+1));
       strcpy(conf->ms->nick, ptr);
     }
     else if (!strcasecmp(p, "MULTISERV_USERNAME"))
     {
-      conf->ms->username = (char*)realloc(conf->ms->username, sizeof(char)*(strlen(ptr)+1));
+      conf->ms->username = (char*)xrealloc(conf->ms->username, sizeof(char)*(strlen(ptr)+1));
       strcpy(conf->ms->username, ptr);
     }
     else if (!strcasecmp(p, "MULTISERV_USERINFO"))
     {
-      conf->ms->userinfo = (char*)realloc(conf->ms->userinfo, sizeof(char)*(strlen(ptr)+1));
+      conf->ms->userinfo = (char*)xrealloc(conf->ms->userinfo, sizeof(char)*(strlen(ptr)+1));
       strcpy(conf->ms->userinfo, ptr);
     }
 
@@ -186,27 +186,27 @@ int conf_load(void)
 
     else if (!strcasecmp(p, "MYSQL_DATABASE"))
     {
-      conf->mysql->database = (char*)realloc(conf->mysql->database, sizeof(char)*(strlen(ptr)+1));
+      conf->mysql->database = (char*)xrealloc(conf->mysql->database, sizeof(char)*(strlen(ptr)+1));
       strcpy(conf->mysql->database, ptr);
     }
     else if (!strcasecmp(p, "MYSQL_USERNAME"))
     {
-      conf->mysql->username = (char*)realloc(conf->mysql->username, sizeof(char)*(strlen(ptr)+1));
+      conf->mysql->username = (char*)xrealloc(conf->mysql->username, sizeof(char)*(strlen(ptr)+1));
       strcpy(conf->mysql->username, ptr);
     }
     else if (!strcasecmp(p, "MYSQL_PASSWORD"))
     {
-      conf->mysql->password = (char*)realloc(conf->mysql->password, sizeof(char)*(strlen(ptr)+1));
+      conf->mysql->password = (char*)xrealloc(conf->mysql->password, sizeof(char)*(strlen(ptr)+1));
       strcpy(conf->mysql->password, ptr);
     }
     else if (!strcasecmp(p, "MYSQL_UNIXSOCK"))
     {
-      conf->mysql->unixsock = (char*)realloc(conf->mysql->unixsock, sizeof(char)*(strlen(ptr)+1));
+      conf->mysql->unixsock = (char*)xrealloc(conf->mysql->unixsock, sizeof(char)*(strlen(ptr)+1));
       strcpy(conf->mysql->unixsock, ptr);
     }
     else if (!strcasecmp(p, "MYSQL_HOST"))
     {
-      conf->mysql->host = (char*)realloc(conf->mysql->host, sizeof(char)*(strlen(ptr)+1));
+      conf->mysql->host = (char*)xrealloc(conf->mysql->host, sizeof(char)*(strlen(ptr)+1));
       strcpy(conf->mysql->host, ptr);
     }
     else if (!strcasecmp(p, "MYSQL_PORT"))

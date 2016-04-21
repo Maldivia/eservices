@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: op.c,v 1.2 2003/02/25 23:15:04 cure Exp $ */
+/* $Id: op.c,v 1.3 2003/10/19 22:24:38 mr Exp $ */
 
 
 #include "errors.h"
@@ -62,7 +62,13 @@ FUNC_COMMAND(operserv_op)
   
   com_wallops(conf->os->numeric, "%s requested mode: %s +o %s\n", from->nick, chan, from->nick);
   log_command(LOG_OPERSERV, from, "OP", queue_escape_string(chan));
-  if (info->chanserv)
+  if (!info->chanserv)
+  {
+    com_send(irc, "%s J %s\n", conf->cs->numeric, chan);
+    com_send(irc, "%s M %s +o %s\n", conf->numeric, chan, conf->cs->numeric);
+    com_send(irc, "%s M %s +o %s\n", conf->cs->numeric, chan, from->numeric);
+    return com_send(irc, "%s L %s\n", conf->cs->numeric, chan);    
+  }
+  else
     return com_send(irc, "%s M %s +o %s\n", conf->cs->numeric, chan, from->numeric);
-  return com_send(irc, "%s M %s +o %s\n", conf->numeric, chan, from->numeric);     
 }

@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: removeme.c,v 1.3 2003/03/01 16:47:04 cure Exp $ */
+/* $Id: removeme.c,v 1.4 2004/01/17 14:47:19 mr Exp $ */
 
 #include <string.h>
 
@@ -68,7 +68,7 @@ FUNC_COMMAND(chanserv_removeme)
   if (chanserv_dbase_check_access(from->nickserv, ch, CHANSERV_LEVEL_OWNER)) return com_message(sock, conf->cs->numeric, from->numeric, format, CHANSERV_REMOVEME_OWNER);
   
   /* Was the correct password specified */
-  if (strcmp(from->nickserv->password, ircd_crypt(pwd, from->nickserv->password))) return com_message(sock, conf->cs->numeric, from->numeric, format, CHANSERV_WRONG_PASSWORD);
+  if (password_compare(from->nickserv, pwd)) return com_message(sock, conf->cs->numeric, from->numeric, format, CHANSERV_WRONG_PASSWORD);
   
   /* Remove the acces */
   chanserv_dbase_access_delete(ch, from->nickserv, COMMIT_TO_MYSQL);

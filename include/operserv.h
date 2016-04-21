@@ -1,7 +1,7 @@
 /****************************************************************************
 * Exiled.net IRC Services                                                   *
-* Copyright (C) 2002  Michael Rasmussen <the_real@nerdheaven.dk>            *
-*                     Morten Post <cure@nerdheaven.dk>                      *
+* Copyright (C) 2002-2003  Michael Rasmussen <the_real@nerdheaven.dk>       *
+*                          Morten Post <cure@nerdheaven.dk>                 *
 *                                                                           *
 * This program is free software; you can redistribute it and/or modify      *
 * it under the terms of the GNU General Public License as published by      *
@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: operserv.h,v 1.8 2003/02/25 23:14:11 cure Exp $ */
+/* $Id: operserv.h,v 1.14 2004/08/05 00:01:57 mr Exp $ */
 
 #ifndef INC_OPERSERV_H
 #define INC_OPERSERV_H
@@ -38,22 +38,29 @@
                                 "/msg %s HELP <command>"
 /* Syntax function defines */
 #define OPERSERV_SYNTAX_HELP      "Syntax: HELP [command]"
-#define OPERSERV_SYNTAX_BROADCAST "Syntax: BROADCAST <USERS|OPERS> <message>"
+#define OPERSERV_SYNTAX_BROADCAST "Syntax: BROADCAST <USERS|ANONYMOUS|OPERS> <message>"
 #define OPERSERV_SYNTAX_OPERLIST  "Syntax: OPERLIST"
+#define OPERSERV_SYNTAX_NETINFO   "Syntax: NETINFO"
+#define OPERSERV_SYNTAX_IGNORES   "Syntax: IGNORES"
+#define OPERSERV_SYNTAX_KILLCHAN  "Syntax: KILLCHAN <#channel> <reason>"
 #define OPERSERV_SYNTAX_OP        "Syntax: OP <#channel>"
 #define OPERSERV_SYNTAX_MODE      "Syntax: MODE <#channel> <modes [mode parameters]>"
+#define OPERSERV_SYNTAX_CLONESCAN "Syntax: CLONESCAN TODO"
 #define OPERSERV_SYNTAX_TRACE     "Syntax: TRACE <user@host>"
-#define OPERSERV_SYNTAX_GLINE     "Syntax: GLINE <user@host> <durance> <reason>"
+#define OPERSERV_SYNTAX_GLINE     "Syntax: GLINE <user@host|nick> <durance> <reason>"
 #define OPERSERV_SYNTAX_UNGLINE   "Syntax: UNGLINE <user@host>"
 #define OPERSERV_SYNTAX_DIE       "Syntax: DIE <confirm string> <reason>"
 #define OPERSERV_SYNTAX_REMOPER   "Syntax: REMOPER <nick> FORCE"
 #define OPERSERV_SYNTAX_ACCESS    "Syntax: ACCESS <nick> [+access | -access]"
+#ifdef SQL_INTERFACE_ACTIVATED
+#define OPERSERV_SYNTAX_SQL       "Syntax: SQL <option> <parameter>"
+#endif
 
 /* GENERIC OPERSERV_ defines that are used in common. They should
    all be placed here.
  */
 #define OPERSERV_USER_NOT_FOUND   "User not found."
-#define OPERSERV_INVALID_GLINE    "Invalid gline user@host, must contain at least 5 non-wildcard characters!"
+#define OPERSERV_INVALID_GLINE    "Invalid gline user@host, must contain at least 3 non-wildcard characters!"
 
 /* 
    FUNC_COMMAND prototypes.
@@ -62,14 +69,21 @@
 FUNC_COMMAND(operserv_help);
 FUNC_COMMAND(operserv_broadcast);
 FUNC_COMMAND(operserv_operlist);
+FUNC_COMMAND(operserv_netinfo);
+FUNC_COMMAND(operserv_ignores);
 FUNC_COMMAND(operserv_mode);
 FUNC_COMMAND(operserv_op);
 FUNC_COMMAND(operserv_trace);
+FUNC_COMMAND(operserv_clonescan);
 FUNC_COMMAND(operserv_gline);
 FUNC_COMMAND(operserv_ungline);
+FUNC_COMMAND(operserv_killchan);
 FUNC_COMMAND(operserv_die);
 FUNC_COMMAND(operserv_access);
 FUNC_COMMAND(operserv_remoper);
+#ifdef SQL_INTERFACE_ACTIVATED
+FUNC_COMMAND(operserv_sql);
+#endif
 
 /*
    Function prototypes for operserv helper functions.

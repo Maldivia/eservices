@@ -1,7 +1,7 @@
 /****************************************************************************
 * Exiled.net IRC Services                                                   *
-* Copyright (C) 2002  Michael Rasmussen <the_real@nerdheaven.dk>            *
-*                     Morten Post <cure@nerdheaven.dk>                      *
+* Copyright (C) 2002-2003  Michael Rasmussen <the_real@nerdheaven.dk>       *
+*                          Morten Post <cure@nerdheaven.dk>                 *
 *                                                                           *
 * This program is free software; you can redistribute it and/or modify      *
 * it under the terms of the GNU General Public License as published by      *
@@ -17,7 +17,7 @@
 * along with this program; if not, write to the Free Software               *
 * Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA *
 *****************************************************************************/
-/* $Id: errors.h,v 1.1.1.1 2002/08/20 15:20:02 mr Exp $ */
+/* $Id: errors.h,v 1.3 2004/03/23 11:54:15 mr Exp $ */
 
 #ifndef INC_ERRORS_H
 #define INC_ERRORS_H
@@ -33,6 +33,8 @@
 #define ERROR_SERVER_COULD_NOT_CONNECT 4000
 
 #define ERROR_OPERSERV_DIE 5000
+
+#define ERROR_PING_TIMEOUT 6000
 
 #define ERROR_NO_ACCESS       0x7fffffff
 #define ERROR_UNKNOWN_COMMAND 0x7fffffff
